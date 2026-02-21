@@ -1,12 +1,7 @@
 {
-  "name": "tla-plugin",
-  "description": "TLA+ formal specification support for Claude Code",
-  "version": "0.1.0",
+  "name": "tlaplus-workflow",
+  "description": "Hide TLA+ formal verification behind a conversational interface. Five specialist agents interview, specify, verify, animate, and test stateful system designs without exposing formal notation.",
   "author": {
     "name": "Richard"
-  },
-  "keywords": ["tla+", "formal-verification", "specification", "model-checking"],
-  "skills": "./skills/",
-  "agents": "./agents/",
-  "hooks": "./hooks/hooks.json"
+  }
 }

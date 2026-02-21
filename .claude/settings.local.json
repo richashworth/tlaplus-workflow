@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(chmod:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(claude agents)"
     ]
   }
 }
