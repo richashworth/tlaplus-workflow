@@ -1,0 +1,12 @@
+{
+  "name": "tla-plugin",
+  "description": "TLA+ formal specification support for Claude Code",
+  "version": "0.1.0",
+  "author": {
+    "name": "Richard"
+  },
+  "keywords": ["tla+", "formal-verification", "specification", "model-checking"],
+  "skills": "./skills/",
+  "agents": "./agents/",
+  "hooks": "./hooks/hooks.json"
+}
