@@ -21,9 +21,12 @@ PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(pwd)}"
 . "$PLUGIN_ROOT/scripts/resolve-tlc.sh"
 ```
 
-This gives you `run_tlc <args>` and `run_sany <file>`. If TLC isn't installed, the commands print setup instructions and exit non-zero.
+This gives you `run_tlc <args>` and `run_sany <file>`. Use **only** these functions to invoke TLC and SANY — never call `java -jar` with a manually-located jar, and **never search the filesystem** for `tla2tools.jar` (no `find`, `locate`, `ls`, `mdfind`, or any other discovery command).
 
-If TLC is missing, tell the user: "TLC is not installed. Run this to set it up: `$PLUGIN_ROOT/scripts/setup-tlc.sh`"
+If `run_tlc` or `run_sany` exits non-zero with "TLC not found", stop and tell the user:
+"TLC is not installed. Run this to set it up: `$PLUGIN_ROOT/scripts/setup-tlc.sh`"
+
+Do not attempt to work around a missing TLC installation.
 
 ## 2. Run SANY Syntax Check First
 
@@ -133,6 +136,7 @@ run_tlc -modelcheck -workers auto -config "$CFG_FILE" "$SPEC_FILE"
 ### With increased memory (use if TLC reports OutOfMemoryError)
 
 ```bash
+_TLA2TOOLS="$PLUGIN_ROOT/lib/tla2tools.jar"
 java -Xmx4g -jar "$_TLA2TOOLS" -modelcheck -workers auto -config "$CFG_FILE" "$SPEC_FILE"
 ```
 

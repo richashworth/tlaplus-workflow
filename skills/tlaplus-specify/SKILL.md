@@ -35,6 +35,16 @@ If any section is missing or empty, stop and ask the user to fill the gap before
 
 Invoke the **specifier** agent. Pass it the confirmed system summary. It writes `.tlaplus/<Module>.tla` and `.tlaplus/<Module>.cfg`.
 
+### Step 1.5: Present and offer next steps
+
+Tell the user what was created (file paths) and give a one-line summary of the module scope (e.g., "3 entities, 5 actions, 2 safety invariants, 1 liveness property"). Then ask what they'd like to do next:
+
+- **Walk me through the spec** — summarize the spec in plain language: what the entities are, what transitions exist, what properties are checked, and why. No TLA+ syntax — just the domain story.
+- **Animate it** — skip straight to the interactive playground (Step 3). The spec has not been model-checked yet, so the playground may demonstrate bugs — that's fine if the user wants to explore the design visually first.
+- **Verify it** — run TLC model checking (Step 2) to find design bugs before anything else.
+
+Wait for the user's choice before proceeding.
+
 ### Step 2: Verify (loop)
 
 Invoke the **verifier** agent. It runs TLC against the spec.
@@ -73,7 +83,8 @@ After the playground is open:
 
 ## Rules
 
-- **Don't stop between steps.** The pipeline runs continuously. Don't ask "would you like me to continue?" between specify, verify, and animate — just go.
-- **Do stop for violations.** When TLC finds a bug, present it and get the user's input before fixing. This is the one point where you pause.
+- **Stop after spec creation.** Always pause at Step 1.5 to let the user choose their next step. Don't auto-advance into verification or animation.
+- **Don't stop between verify and animate.** Once the user picks "Verify it" and verification passes clean, proceed directly to animation without asking again.
+- **Do stop for violations.** When TLC finds a bug, present it and get the user's input before fixing.
 - **Do stop for extras.** Tests and code changes are opt-in. Offer, don't push.
 - **Domain knowledge lives in agents.** You handle sequencing and user interaction. The specifier knows TLA+, the verifier knows TLC, the animator knows HTML. Don't duplicate their expertise.
