@@ -30,6 +30,16 @@ Invoke the **verifier** agent. It runs TLC against the spec.
 
 Invoke the **animator** agent. It reads the verified spec and produces `.tlaplus/playground.html`.
 
+**After the animator finishes, validate the playground:**
+
+Read the `.tla` spec, the `.cfg` file, and the generated `.tlaplus/playground.html`. Check coverage:
+
+1. Every variable from the `VARIABLES` declaration in the `.tla` file has a corresponding key in `INITIAL_STATE`.
+2. Every action disjunct from `Next` in the `.tla` file is represented in `ACTIONS` (parameterized actions may expand to multiple entries or use a dynamic generator — that's fine, but no action should be entirely absent).
+3. Every `INVARIANT` from the `.cfg` file appears in the `INVARIANTS` array.
+
+If anything is missing, re-invoke the animator with the specific list of missing items. Max 2 retries. If still incomplete, warn the user and continue.
+
 The animator opens the playground automatically. Tell the user:
 
 > Click through actions to explore how your system behaves. The sidebar tracks which rules hold at every step.
