@@ -132,33 +132,37 @@ Proceed to TLC with no changes.
 
 ## 4. TLC Invocation
 
-**Always use this exact command pattern** (with `timeout` wrapper):
+Use the plugin's `run-tlc.sh` script:
 
 ```bash
-DUMP_FILE="${SPEC_FILE%.tla}_states.dot"
-TLC_OUTPUT_FILE="${SPEC_FILE%.tla}_tlc_output.txt"
-timeout 120 bash -c 'run_tlc -modelcheck -workers auto -dump dot,actionlabels,colorize "$3" -config "$1" "$2" 2>&1 | tee "$4"' -- "$CFG_FILE" "$SPEC_FILE" "$DUMP_FILE" "$TLC_OUTPUT_FILE"
+PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(pwd)}"
+"$PLUGIN_ROOT/scripts/run-tlc.sh" "$SPEC_FILE" "$CFG_FILE"
 ```
 
-If the exit code is 124 (timeout killed it), report:
-"TLC is still exploring states after 2 minutes. The state space may be too large — consider reducing CONSTANT values in the .cfg file."
+This handles the timeout (120s), state graph dump (`-dump dot,actionlabels,colorize`), and output capture automatically. It creates a `<ModuleName>/` directory alongside the spec containing `states.dot` and `tlc-output.txt`.
 
-### With increased memory (use if TLC reports OutOfMemoryError)
+If TLC reports `OutOfMemoryError`, re-run with increased memory:
 
 ```bash
-DUMP_FILE="${SPEC_FILE%.tla}_states.dot"
-TLC_OUTPUT_FILE="${SPEC_FILE%.tla}_tlc_output.txt"
-_TLA2TOOLS="$PLUGIN_ROOT/lib/tla2tools.jar"
-timeout 120 bash -c 'java -Xmx4g -jar "$5" -modelcheck -workers auto -dump dot,actionlabels,colorize "$3" -config "$1" "$2" 2>&1 | tee "$4"' -- "$CFG_FILE" "$SPEC_FILE" "$DUMP_FILE" "$TLC_OUTPUT_FILE" "$_TLA2TOOLS"
+"$PLUGIN_ROOT/scripts/run-tlc.sh" --memory "$SPEC_FILE" "$CFG_FILE"
 ```
 
-Key flags:
-- `-workers auto` — use all available cores
-- `-modelcheck` — explicit model checking mode
-- `-config` — point to the .cfg file
-- `-deadlock` — add this flag ONLY if the spec intentionally allows deadlock (terminating systems)
+Exit codes:
+- **0** — TLC finished successfully (no violations)
+- **12** — TLC found violations
+- **124** — timeout (TLC killed after 120 seconds). Report: "TLC is still exploring states after 2 minutes. The state space may be too large — consider reducing CONSTANT values in the .cfg file."
+- **1** — setup error
 
-Run from the directory containing the `.tla` file so relative paths resolve correctly.
+The script prints artifact paths at the end (after a `---` separator):
+
+```
+artifact_dir=.tlaplus/LockManager
+dump_file=.tlaplus/LockManager/states.dot
+tlc_output=.tlaplus/LockManager/tlc-output.txt
+tlc_exit=0
+```
+
+Parse these to get the paths for subsequent steps. The `-deadlock` flag is NOT included by default — add it manually only if the spec intentionally allows deadlock (terminating systems).
 
 **Important:** When calling the Bash tool, set its timeout to 130000 (130 seconds) so the `timeout` command has a chance to kill TLC before the Bash tool itself times out.
 
@@ -254,15 +258,14 @@ For each `State N:` block:
 
 ## 5.5. Generate State Graph
 
-After TLC finishes (whether clean or with violations), generate the state graph JSON:
+After TLC finishes (whether clean or with violations), generate the state graph JSON. Use the artifact paths from `run-tlc.sh` output:
 
 ```bash
-PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(pwd)}"
 python3 "$PLUGIN_ROOT/scripts/dot-to-json.py" \
-  --dot "$DUMP_FILE" \
+  --dot "$ARTIFACT_DIR/states.dot" \
   --cfg "$CFG_FILE" \
-  --tlc-output "$TLC_OUTPUT_FILE" \
-  --output "${SPEC_FILE%.tla}_state-graph.json"
+  --tlc-output "$ARTIFACT_DIR/tlc-output.txt" \
+  --output "$ARTIFACT_DIR/state-graph.json"
 ```
 
 Exit codes:
