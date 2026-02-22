@@ -2,6 +2,16 @@
 
 Formal verification without learning TLA+. Describe your system through conversation (or point at code), and get back a verified TLA+ spec, an interactive playground, and optionally property-based tests and scaffolded implementation code.
 
+## Installation
+
+Clone this repo into your Claude Code plugins directory:
+
+```
+git clone https://github.com/richardashworth/tlaplus-workflow ~/.claude/plugins/tlaplus-workflow
+```
+
+The first run auto-downloads `tla2tools.jar` — no manual setup needed if Java and curl are available.
+
 ## Quick Start
 
 ### From conversation
@@ -88,7 +98,7 @@ Property-based tests go in your project's existing test directory, following its
 
 - **Java 11+** — runs TLC and SANY (`java -jar tla2tools.jar`)
 - **Python 3** — runs `scripts/dot-to-json.py` (stdlib only, no pip packages)
-- **GNU coreutils** — provides `timeout`, used by `run-tlc.sh` to kill TLC after 120 s. Pre-installed on Linux; on macOS: `brew install coreutils`
+- **GNU coreutils** — provides `timeout` (Linux) or `gtimeout` (macOS), used by `run-tlc.sh` to kill TLC after 120 s. Pre-installed on Linux; on macOS: `brew install coreutils`
 - **curl** — downloads `tla2tools.jar` during auto-setup (pre-installed on macOS and most Linux)
 - **TLC model checker** — run `scripts/setup-tlc.sh` to auto-download, or place `tla2tools.jar` in `lib/` manually
 
@@ -110,10 +120,15 @@ templates/
   playground.html              # Playground HTML template (graph-walking engine)
 
 hooks/hooks.json               # SANY syntax check on .tla writes
-scripts/check-tla-syntax.sh    # Hook implementation
-scripts/setup-tlc.sh           # Downloads tla2tools.jar to lib/
-scripts/resolve-tlc.sh         # Shared TLC resolution (sourced by other scripts)
-scripts/run-tlc.sh             # TLC execution with timeout, dump, and output capture
-scripts/dot-to-json.py         # Converts TLC DOT state dump to playground JSON
+
+scripts/
+  check-tla-syntax.sh           # Hook implementation
+  setup-tlc.sh                  # Downloads tla2tools.jar to lib/
+  resolve-tlc.sh                # Shared TLC resolution (sourced by other scripts)
+  run-tlc.sh                    # TLC execution with timeout, dump, and output capture
+  dot-to-json.py                # Converts TLC DOT state dump to playground JSON
+
+.claude-plugin/plugin.json     # Plugin manifest (name, description, author)
+.claude/settings.json          # Pre-configured permissions for scripts
 lib/tla2tools.jar              # TLC model checker (auto-downloaded)
 ```
