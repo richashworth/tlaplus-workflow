@@ -290,10 +290,45 @@ Always return these fields:
 - **state_graph**: `generated` | `too_large` | `failed` (and path if generated)
 
 For each violation, include:
+- **category**: `spec_error` | `requirement_conflict` (see below)
 - **type**: invariant | deadlock | temporal
 - **name**: the TLA+ property name (e.g., `MutualExclusion`, `EventualResponse`)
 - **summary**: one sentence in domain language describing the scenario
 - **trace_states**: number of states in the counterexample trace
+- **trace**: the full step-by-step trace in domain language
+
+Additional fields for `requirement_conflict` violations:
+- **requirements_in_tension**: which user requirements are mutually unsatisfiable
+- **possible_resolutions**: list of options the user could choose to resolve the conflict (do not pick one)
+
+### Violation Categories
+
+Every violation must be classified into exactly one of two categories:
+
+**`spec_error`** — The TLA+ code doesn't correctly encode the user's stated requirements. The violation exists because of a coding mistake in the spec, not because the requirements themselves conflict. Examples:
+- A variable missing from an `UNCHANGED` clause, causing spurious state changes
+- An incorrect guard that doesn't match the described transition (e.g., wrong comparison operator, missing precondition)
+- A missing action case in the `Next` disjunction
+- An `Init` that doesn't match the described initial state
+- A type mismatch in the invariant definition
+
+These are bugs in the spec, not in the design. The specifier can fix them without user input.
+
+**`requirement_conflict`** — Two or more user requirements are mutually unsatisfiable in some reachable state. The spec correctly encodes what the user asked for, but what the user asked for is contradictory. Examples:
+- "A resource must always be available" + "Only one actor can hold a resource at a time" + "Actors never release resources" — the availability invariant will eventually break
+- "Every request must eventually be processed" + "The system can reject requests when at capacity" + no re-queue mechanism — liveness fails for rejected requests
+- A deadlock where every action's guard is blocked by the combined effect of correctly-encoded constraints
+
+These require the user to decide which requirement to relax or how to resolve the tension.
+
+### How to classify
+
+1. Read the violation trace step by step.
+2. For each step, check whether the action's behavior matches the user's stated requirements (from the structured summary the specifier was given).
+3. If any step does something the user didn't ask for, or fails to do something they did ask for → `spec_error`.
+4. If every step faithfully follows the stated requirements but the end state still violates an invariant or property → `requirement_conflict`.
+
+When in doubt, lean toward `requirement_conflict` — it's better to ask the user than to silently "fix" a design decision.
 
 ### Example return (violations)
 
@@ -304,12 +339,21 @@ stats: 2847 states generated, 1523 distinct states, depth 14
 state_graph: generated (specs/LockManager/state-graph.json)
 
 violations:
-  1. type: invariant, name: MutualExclusion
-     summary: Two clients hold the same lock simultaneously when one acquires while the other's release is in progress.
+  1. category: spec_error, type: invariant, name: MutualExclusion
+     summary: Two clients hold the same lock simultaneously because Release doesn't guard against concurrent Acquire.
      trace_states: 4
-  2. type: temporal, name: EventualRelease
+     trace: [step-by-step trace]
+  2. category: requirement_conflict, type: temporal, name: EventualRelease
      summary: A client holds a lock forever because competing acquire requests keep preempting the release action.
      trace_states: 6 (loop at state 3)
+     trace: [step-by-step trace]
+     requirements_in_tension:
+       - "Every lock must eventually be released"
+       - "Any client can acquire any free lock at any time"
+     possible_resolutions:
+       - Add a maximum hold duration after which the lock is forcibly released
+       - Give priority to release actions over new acquisitions
+       - Limit the number of concurrent acquire attempts
 ```
 
 ### Example return (clean)

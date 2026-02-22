@@ -235,13 +235,25 @@ Wait for the user's choice before proceeding.
 
 This step runs TLC, generates the state graph, builds the interactive playground, and presents results. Follow this exact sequence — steps cannot be reordered.
 
-**Step 5.1: Invoke the verifier agent.** It returns structured results:
+**Step 5.1: Invoke the verifier agent.** Pass it the spec files **and** the confirmed structured summary (so it can classify violations as spec errors vs requirement conflicts). It returns structured results:
 - `status`: clean | violations | error
-- `violation_count` and violation summaries (one line each)
+- `violation_count` and violation summaries (one line each), each categorized as `spec_error` or `requirement_conflict`
 - `state_graph`: generated | too_large | failed
 - `stats`: states found, distinct states, depth
 
-**Step 5.2: Handle SANY errors** (syntax errors, not design violations): Don't surface to the user. Route to the specifier agent to fix. Re-verify. Only escalate after 2 failed attempts.
+**Step 5.2: Handle verifier results by category.** The verifier classifies each violation as either a `spec_error` or a `requirement_conflict`:
+
+**Spec coding errors** (`spec_error`) — the TLA+ code doesn't correctly encode the user's requirements. These are bugs in the spec, not in the design. Route back to the specifier agent with the violation trace and ask it to fix the encoding. Re-verify after the fix. Escalate to the user only after 2 failed fix attempts ("I've tried to fix this twice but the issue persists — here's what's going wrong: [details]").
+
+**Requirement conflicts** (`requirement_conflict`) — two or more stated requirements are mutually unsatisfiable. These are design decisions that only the user can resolve. For each conflict, present:
+- The rule that was broken
+- The step-by-step trace showing how the system reaches the bad state
+- Which requirements are in tension
+- A list of possible resolutions (do not pick one)
+
+Use AskUserQuestion to let the user choose a resolution. Once they decide, update the structured summary to reflect the resolution, route to the specifier to update the spec, and re-verify from Step 5.1.
+
+**SANY errors** (syntax/parse errors, not violations): Don't surface to the user. Route to the specifier agent to fix silently. Re-verify. Escalate after 2 failed attempts.
 
 **Step 5.3: Handle state graph too large.** If the verifier reports `state_graph: too_large`, tell the user the state space is too large for an interactive playground. Suggest reducing constants or opening the `.tla` file in [Spectacle](https://github.com/will62794/spectacle). Skip to Step 5.5 (text-only violation presentation).
 
@@ -249,7 +261,9 @@ This step runs TLC, generates the state graph, builds the interactive playground
 
 **Step 5.5: Present results and get user input.**
 
-**If violations found** — list each violation with its ID, the broken rule, and a one-sentence summary:
+By this point, all `spec_error` violations have been resolved in Step 5.2. Only `requirement_conflict` violations (if any) remain.
+
+**If requirement conflicts found** — list each with its ID, the broken rule, and a one-sentence summary:
 
 > TLC found {N} scenarios where your design rules are broken:
 >
