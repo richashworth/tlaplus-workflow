@@ -92,8 +92,8 @@ Property-based tests go in your project's existing test directory, following its
 
 ## Requirements
 
-- **TLC model checker** — install via `brew install tla-plus-toolbox` or download `tla2tools.jar` from [tlaplus/tlaplus releases](https://github.com/tlaplus/tlaplus/releases) and place it in `~/.tlaplus/tla2tools.jar`
-- **Java** — required to run TLC
+- **Java** — required to run TLC (JDK 11+)
+- **TLC model checker** — run `scripts/setup-tlc.sh` to auto-download, or place `tla2tools.jar` in `lib/` manually
 
 ## File Structure
 
@@ -115,4 +115,7 @@ skills/
 
 hooks/hooks.json               # SANY syntax check on .tla writes
 scripts/check-tla-syntax.sh    # Hook implementation
+scripts/setup-tlc.sh           # Downloads tla2tools.jar to lib/
+scripts/resolve-tlc.sh         # Shared TLC resolution (sourced by other scripts)
+lib/tla2tools.jar              # TLC model checker (auto-downloaded)
 ```

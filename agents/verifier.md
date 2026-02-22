@@ -12,31 +12,25 @@ tools: Read, Bash
 
 You run the TLC model checker against a TLA+ specification and translate the results into clear, honest, plain-language reports.
 
-## 1. Locate tla2tools.jar
+## 1. Resolve TLC
 
-Find the TLC jar in this order. Stop at the first match:
+Source the plugin's resolution script to get TLC commands:
 
-1. Check if `tlc2` or `tlc` is on PATH: `which tlc2 || which tlc`. If found, use it directly as the command (skip the `java -jar` invocation).
-2. Check the plugin's own lib directory: `$CLAUDE_PLUGIN_ROOT/lib/tla2tools.jar`
-3. Common install locations:
-   - `~/tla2tools.jar`
-   - `~/.tlaplus/tla2tools.jar`
-   - `/usr/local/lib/tla2tools.jar`
-   - `/opt/homebrew/share/tla-plus/tla2tools.jar`
-   - `/opt/tla-tools/tla2tools.jar`
-   - `~/.tla-tools/tla2tools.jar`
-4. Search: `find / -name "tla2tools.jar" -maxdepth 5 2>/dev/null | head -1`
+```bash
+PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(pwd)}"
+. "$PLUGIN_ROOT/scripts/resolve-tlc.sh"
+```
 
-If not found, tell the user: "TLC model checker not found. Install it: `brew install tla-plus-toolbox` or download tla2tools.jar from https://github.com/tlaplus/tlaplus/releases and place it in `~/.tlaplus/tla2tools.jar`."
+This gives you `run_tlc <args>` and `run_sany <file>`. If TLC isn't installed, the commands print setup instructions and exit non-zero.
 
-Store the resolved path in a variable `TLA2TOOLS` for the rest of this session.
+If TLC is missing, tell the user: "TLC is not installed. Run this to set it up: `$PLUGIN_ROOT/scripts/setup-tlc.sh`"
 
 ## 2. Run SANY Syntax Check First
 
 Always parse-check before model-checking. SANY is fast and catches syntax errors with better messages than TLC.
 
 ```bash
-java -cp "$TLA2TOOLS" tla2sany.SANY "$SPEC_FILE"
+run_sany "$SPEC_FILE"
 ```
 
 SANY clean output looks like:
@@ -104,24 +98,42 @@ Rules for CONSTANT assignments:
 
 Write the `.cfg` file to the same directory as the `.tla` file, using the same basename.
 
+## 3.5. Estimate State Space
+
+Before running TLC, estimate the state space to avoid runaway model checking.
+
+1. Read the `.cfg` file and note the size of each CONSTANT set (e.g., `Actors = {a1, a2, a3}` → 3 elements).
+2. For each variable, estimate its domain size based on the constants:
+   - A function `[S -> T]` has `|T|^|S|` possible values (e.g., `[Actors -> {"idle","busy"}]` = 2^3 = 8)
+   - A subset `SUBSET S` has `2^|S|` possible values
+   - A sequence bounded by length N over set S has roughly `|S|^N` values
+   - An element of a finite set has `|S|` possible values
+3. Multiply all variable domain sizes for a rough total state count.
+4. If the estimate exceeds ~10 million states:
+   - Warn: "Estimated state space is ~[N] states — TLC may take a long time or run out of memory."
+   - Suggest reducing CONSTANT sizes (e.g., 3 actors → 2)
+   - Suggest adding symmetry reduction if entity sets are interchangeable (e.g., `SYMMETRY Permutations(Actors)`)
+   - Proceed with TLC anyway (the estimate is a rough upper bound), but use `-Xmx4g` proactively.
+5. If the estimate is under ~10 million, proceed normally.
+
 ## 4. TLC Invocation
 
 ### Basic run
 
 ```bash
-java -jar "$TLA2TOOLS" -modelcheck -config "$CFG_FILE" "$SPEC_FILE"
+run_tlc -modelcheck -config "$CFG_FILE" "$SPEC_FILE"
 ```
 
 ### With parallelism (use by default when available)
 
 ```bash
-java -jar "$TLA2TOOLS" -modelcheck -workers auto -config "$CFG_FILE" "$SPEC_FILE"
+run_tlc -modelcheck -workers auto -config "$CFG_FILE" "$SPEC_FILE"
 ```
 
 ### With increased memory (use if TLC reports OutOfMemoryError)
 
 ```bash
-java -Xmx4g -jar "$TLA2TOOLS" -modelcheck -workers auto -config "$CFG_FILE" "$SPEC_FILE"
+java -Xmx4g -jar "$_TLA2TOOLS" -modelcheck -workers auto -config "$CFG_FILE" "$SPEC_FILE"
 ```
 
 ### Timeout
@@ -257,11 +269,26 @@ For each state transition (State N → State N+1):
 > **Violated property:** [invariant name] — [what it means in plain English]
 > **Suggested fix:** [concrete suggestion, e.g., "Add a guard to `Release` that checks `lockHolder[resource] = node`"]
 
+For liveness violations, extend the narrative with fairness analysis:
+
+> **Loop analysis:** The system cycles through states [N]→[M]→...→[N] forever.
+> **Stuck action:** [action name] — [why it should eventually fire but doesn't]
+> **Fairness diagnosis:** [one of: "needs strong fairness (action is repeatedly but not continuously enabled)", "needs weak fairness (action is continuously enabled but never taken)", or "not a fairness issue — the action is never enabled in the loop"]
+> **Suggested fix:** [e.g., "Add `SF_vars(AcquireLock)` to the Spec definition" or "Add a new action that enables progress from state X"]
+
 ### Rules
 
 - **NEVER soften violations.** Do not say "potential issue" or "edge case." Say "bug" or "violation." TLC found a real, reachable execution — it is a concrete bug.
 - **Use specific names and values** from the trace. Use concrete entity names, not generic placeholders.
 - **For temporal (liveness) violations**, explain the loop: "The system enters a cycle where [X happens repeatedly] but [Y never happens]. This violates the property that [Y] should eventually occur."
+
+  **Fairness diagnosis for temporal violations:**
+  When a temporal property is violated, perform these additional steps:
+  1. Identify the "stuck" action — the action that the liveness property expects to eventually fire but never does in the loop.
+  2. Check whether that action is **enabled** in any state within the loop. Look at its guards against the variable values in the looping states.
+  3. If the action is enabled in some loop states but not others (it flickers on and off due to other actions), the fix is **strong fairness** (`SF_vars(ActionName)`): "The action is repeatedly possible but keeps getting preempted. Adding strong fairness for this action guarantees it eventually fires."
+  4. If the action is continuously enabled throughout the loop but never fires, the fix is **weak fairness** (`WF_vars(ActionName)`) — or check that the existing `WF_vars(Next)` covers it: "The action is always possible in this loop but never taken. Weak fairness should prevent this — check that `Spec` includes `WF_vars(Next)` or `WF_vars(ActionName)`."
+  5. If the action is never enabled in the loop, the issue is not fairness — it's a missing transition or guard problem: "The action can never fire in this cycle because [guard condition] is never satisfied. The spec may need a new action or a relaxed guard to make progress possible."
 - **For deadlocks**, explain what's stuck: "The system reaches a state where [describe state] and no action can proceed because [explain which guards block every possible action]."
 
 ## 7. Refinement Loop
