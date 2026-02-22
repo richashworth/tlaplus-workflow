@@ -639,6 +639,10 @@ const INVARIANT_LABELS = {};
 const SCENARIO_LABELS = {};
 // === END GENERATED ===
 
+// === GENERATED: HAPPY_PATHS ===
+const HAPPY_PATHS = [];
+// === END GENERATED ===
+
 // === GENERATED: renderState ===
 function renderState(vars) {
   return '<p style="color:var(--text-3);padding:40px;text-align:center;">No prototype renderer loaded.</p>';
@@ -807,18 +811,33 @@ function resetPlayground() {
 }
 
 // =====================================================================
-// Scenarios (auto-populated from violation traces)
+// Scenarios (auto-populated from happy paths + violation traces)
 // =====================================================================
 
 function initScenarios() {
   var scenarios = [];
 
+  // Build scenarios from happy paths
+  (HAPPY_PATHS || []).forEach(function(hp) {
+    if (!hp.trace || hp.trace.length === 0) return;
+    scenarios.push({
+      name: hp.title ? ('\u2705 ' + hp.title) : 'Happy path',
+      description: hp.description || '',
+      rule: null,
+      type: 'happy',
+      traceLen: hp.trace.length,
+      trace: hp.trace
+    });
+  });
+
   // Build scenarios from violation traces
-  (GRAPH.violations || []).forEach(function(v, idx) {
+  var bugNum = 0;
+  (GRAPH.violations || []).forEach(function(v) {
     if (!v.trace || v.trace.length === 0) return;
+    bugNum++;
     var sl = SCENARIO_LABELS[v.id];
     var label = sl && sl.title
-      ? 'Scenario ' + (idx + 1) + ': ' + sl.title
+      ? '\u274C Bug ' + bugNum + ': ' + sl.title
       : v.id + ': ' + (v.invariant || v.property || v.type);
     scenarios.push({
       name: label,
@@ -860,6 +879,7 @@ function initScenarios() {
       resetPlayground();
       activeScenario = s;
       select.value = val;
+      var isHappy = s.type === 'happy';
       var descHtml = '';
       if (s.rule && s.type !== 'deadlock') {
         var ruleLabel = INVARIANT_LABELS[s.rule] || s.rule;
@@ -869,12 +889,12 @@ function initScenarios() {
       }
       if (s.description) {
         descHtml += '<div class="scenario-desc-row">' +
-          '<span class="scenario-desc-label">Bug</span>' +
+          '<span class="scenario-desc-label">' + (isHappy ? 'Outcome' : 'Bug') + '</span>' +
           '<span class="scenario-desc-value">' + escapeHtml(s.description) + '</span></div>';
       }
       descHtml += '<div class="scenario-desc-row">' +
         '<span class="scenario-desc-label">Steps</span>' +
-        '<span class="scenario-desc-value">' + s.traceLen + ' steps to failure</span></div>';
+        '<span class="scenario-desc-value">' + s.traceLen + (isHappy ? ' steps' : ' steps to failure') + '</span></div>';
       descEl.innerHTML = descHtml;
       descEl.classList.add('visible');
     }

@@ -43,7 +43,7 @@ The JSON has this structure:
 
 ## What You Generate
 
-You produce **5 pieces** that plug into the template:
+You produce **6 pieces** that plug into the template:
 
 ### 1. `ACTION_LABELS`
 
@@ -106,7 +106,37 @@ const SCENARIO_LABELS = {
 };
 ```
 
-### 5. `DOMAIN_STYLES`
+### 5. `HAPPY_PATHS`
+
+An array of happy-path traces — representative paths through the state graph that show the system working correctly. These appear in the scenario dropdown alongside bug traces so users can walk through normal behavior, not just failures.
+
+To build these: read the state graph's `transitions` and find interesting paths from the initial state. Good candidates:
+- Paths to terminal states (states with no outgoing transitions) — these show a completed execution
+- If no terminal states exist (the system loops), pick a representative path that exercises the main actions
+
+Each entry has:
+- `title` (string, <60 chars): short domain-language name for the dropdown (e.g., "Lock acquired and released")
+- `description` (string): 1-2 sentence explanation of what this path demonstrates
+- `trace` (array): sequence of `{stateId, action}` entries tracing the path through the graph. The first entry's `action` should be `null` (initial state).
+
+Example:
+```javascript
+const HAPPY_PATHS = [
+  {
+    "title": "Single client acquires and releases lock",
+    "description": "One client successfully acquires the lock, does its work, and releases it.",
+    "trace": [
+      {"stateId": "1", "action": null},
+      {"stateId": "3", "action": "Acquire"},
+      {"stateId": "5", "action": "Release"}
+    ]
+  }
+];
+```
+
+Include at least one happy path. If the spec has multiple meaningfully different successful flows, include one for each (up to ~3).
+
+### 6. `DOMAIN_STYLES`
 
 Additional CSS that themes the playground to the domain. The template uses CSS custom properties (`--bg`, `--surface`, `--text-1`, `--accent`, `--green`, `--red`, `--amber`, etc.) — you can override these for domain theming.
 
@@ -127,6 +157,7 @@ The playground template lives at `templates/playground.html` (relative to the pl
    - **ACTION_LABELS**: Inject your generated label mapping
    - **INVARIANT_LABELS**: Inject your generated invariant descriptions
    - **SCENARIO_LABELS**: Inject your generated scenario metadata
+   - **HAPPY_PATHS**: Inject your generated happy-path traces array
    - **renderState**: Inject your generated function
    - **DOMAIN_STYLES**: Inject your generated CSS (in the `<style>` block)
 5. Update the page `<title>` to match the domain
@@ -148,6 +179,7 @@ Before writing the file, verify:
 - [ ] ACTION_LABELS covers all unique edge labels in the graph
 - [ ] INVARIANT_LABELS has an entry for every name in `GRAPH.invariants`
 - [ ] SCENARIO_LABELS has an entry for every violation ID in `GRAPH.violations`
+- [ ] HAPPY_PATHS has at least one happy-path trace with valid stateIds from the graph
 - [ ] DOMAIN_STYLES themes the prototype to the domain
 - [ ] No external dependencies — everything is inline
 - [ ] The HTML file opens correctly in a browser with no console errors
@@ -165,3 +197,5 @@ open <spec_dir>/<ModuleName>/playground.html
 Then tell the user:
 
 > Playground opened. Click through actions to explore how your system behaves. The sidebar tracks which rules hold at every step.
+
+Also ask if they'd like any cosmetic changes to the domain-specific rendering — colors, layout, labels, icons, etc. The playground is meant to feel like a product mockup, so the user's eye for their domain matters.
