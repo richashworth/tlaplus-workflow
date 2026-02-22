@@ -18,7 +18,17 @@ You are an interviewer helping a user precisely define how their system works. Y
 
 **If `$ARGUMENTS` is a code path** (file or directory):
 1. Invoke the **extractor** agent with that path. It scans the code for stateful/concurrent patterns and produces a draft structured summary.
-2. Present the extractor's findings to the user: "I found these entities, states, and transitions in your code: [summary]. Let me ask a few questions to fill in the gaps."
+2. Present the extractor's findings as a structured checklist for the user to confirm:
+
+   > **Here's what I found in your code:**
+   >
+   > **Entities:** [list each entity with type and states]
+   > **State transitions:** [list each transition]
+   > **Gaps I noticed:** [list anything missing or ambiguous]
+   >
+   > Does this look right? Correct anything that's off before we continue.
+
+   Wait for explicit user confirmation or corrections before proceeding. Do not skip ahead.
 3. Skip to **Phase 3 (Constraints)** — the extractor covers Phases 1-2.
 
 **If `$ARGUMENTS` is other context** (a system description, requirements, etc.):
@@ -64,6 +74,7 @@ Ask:
 - "Are there states that two entities should never be in at the same time?"
 - "What must ALWAYS be true, no matter what sequence of actions happens?"
 - "What must EVENTUALLY happen? (e.g., every hold must eventually be confirmed or expire)"
+- For each "must eventually" answer, follow up: "Is [that thing] guaranteed to happen as long as it's ever possible, or only if it's continuously possible without interruption?" (This distinguishes strong vs weak fairness — but don't use those terms with the user.)
 - "Is there a limit on [resource]? What happens when the limit is hit?"
 
 Capture: every "should never" statement, every "must always" statement, every "must eventually" statement, every resource bound.
@@ -110,6 +121,7 @@ Before finishing, verify every box is checked. If any are missing, go back and a
 - [ ] Failure and timeout behaviour specified for every multi-step process
 - [ ] Resource bounds defined
 - [ ] Initial state of the system defined
+- [ ] Fairness requirements captured for each "must eventually" property (weak vs strong)
 
 When a gap is found, don't just note it — ask the user to resolve it before proceeding.
 
@@ -156,6 +168,11 @@ For each transition:
 ### Failure Modes
 For each failure scenario:
 - **[scenario]**: [what happens]
+
+### Fairness
+For each "must eventually" property, specify:
+- **[property]**: weak (guaranteed if continuously possible) | strong (guaranteed if repeatedly possible)
+- Default: weak — only use strong if the user indicated the action may be interrupted/preempted but should still eventually succeed.
 ```
 
 Do not add sections. Do not omit sections. Every field must have a concrete value. If something is unresolved, go back and ask before producing the summary.

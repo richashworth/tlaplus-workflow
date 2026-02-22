@@ -5,7 +5,7 @@ description: >
   and actions to randomized state transitions. Produces tests that exercise random sequences of
   valid actions and verify invariants hold after every step. Uses the project's existing test
   framework or suggests the standard property-based testing library for the language.
-tools: Read, Write
+tools: Read, Write, Bash
 ---
 
 # Property-Based Test Generator
@@ -168,4 +168,6 @@ Write test files following the project's conventions:
 
 5. **Framework conventions.** Follow the project's existing test patterns for file location, naming, imports, and assertion style.
 
-6. **Suggest next step.** After generating: "Run the tests to confirm they pass. If any fail, it means the implementation diverges from the verified spec — that's a real bug to investigate."
+6. **Run and validate.** After generating the test file, run the tests once using the project's test runner (e.g., `npm test`, `pytest`, `cargo test`, `go test ./...`). If they fail, diagnose the issue — common causes are import errors, missing dependencies, or translation bugs in the action/invariant code. Fix and retry once. Report the final pass/fail result to the user.
+
+7. **Suggest next step.** After generating: "Run the tests to confirm they pass. If any fail, it means the implementation diverges from the verified spec — that's a real bug to investigate."

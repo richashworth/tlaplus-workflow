@@ -95,6 +95,24 @@ After applying changes, report:
 - [K] transitions updated
 ```
 
+### Step 5: Run Existing Tests
+
+After applying code changes, detect and run the project's existing test suite:
+
+1. **Detect the test runner:**
+   - `package.json` with `scripts.test` → `npm test` (or `yarn test`, `pnpm test`)
+   - `pyproject.toml` or `pytest.ini` → `pytest`
+   - `go.mod` → `go test ./...`
+   - `Cargo.toml` → `cargo test`
+   - `Makefile` with `test` target → `make test`
+   - If no test runner is detected, skip and note "No test suite found."
+
+2. **Run the tests** and capture output.
+
+3. **Report results:**
+   - If all tests pass: "All [N] tests pass — the spec-driven changes are compatible with the existing test suite."
+   - If tests fail: Present the failures to the user. Do NOT auto-fix — the user needs to decide whether the test expectations need updating or the code change was wrong. Say: "These tests broke after applying the spec changes. This may mean the tests need updating to match the new behavior, or the code change needs adjustment. Here are the failures: [details]"
+
 ## Key Principles
 
 1. **Minimal changes.** Only modify what the spec diff requires. Don't refactor, don't "improve" surrounding code.

@@ -222,8 +222,40 @@ Copy this template, replace the GENERATED marker blocks with your domain-specifi
 /* ===== Reset ===== */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* ===== Theme: Night Console ===== */
+/* ===== Theme ===== */
 :root {
+  --bg: #f4f4f6;
+  --dot: rgba(0,0,0,0.035);
+  --surface: #ffffff;
+  --surface-hover: #f8f8fa;
+  --surface-raised: #eeeef1;
+  --border: rgba(0,0,0,0.06);
+  --border-mid: rgba(0,0,0,0.1);
+  --border-bright: rgba(0,0,0,0.18);
+  --text-1: #111114;
+  --text-2: #65656e;
+  --text-3: #a4a4ae;
+  --accent: #3b5fd4;
+  --accent-glow: rgba(59,95,212,0.1);
+  --green: #178a50;
+  --green-bg: rgba(23,138,80,0.05);
+  --green-border: rgba(23,138,80,0.18);
+  --red: #cf2050;
+  --red-bg: rgba(207,32,80,0.05);
+  --red-border: rgba(207,32,80,0.18);
+  --red-glow: rgba(207,32,80,0.06);
+  --amber: #b07800;
+  --amber-bg: rgba(176,120,0,0.05);
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --mono: "SF Mono", ui-monospace, "Cascadia Code", Menlo, Consolas, monospace;
+  --radius: 8px;
+  --radius-sm: 5px;
+  --pill: 100px;
+  --fast: 100ms ease;
+  --med: 150ms ease;
+}
+
+:root.dark {
   --bg: #0a0a0c;
   --dot: rgba(255,255,255,0.04);
   --surface: #111114;
@@ -246,40 +278,6 @@ Copy this template, replace the GENERATED marker blocks with your domain-specifi
   --red-glow: rgba(255,51,102,0.12);
   --amber: #f0a030;
   --amber-bg: rgba(240,160,48,0.07);
-  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-  --mono: "SF Mono", ui-monospace, "Cascadia Code", Menlo, Consolas, monospace;
-  --radius: 8px;
-  --radius-sm: 5px;
-  --pill: 100px;
-  --fast: 100ms ease;
-  --med: 150ms ease;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    --bg: #f4f4f6;
-    --dot: rgba(0,0,0,0.035);
-    --surface: #ffffff;
-    --surface-hover: #f8f8fa;
-    --surface-raised: #eeeef1;
-    --border: rgba(0,0,0,0.06);
-    --border-mid: rgba(0,0,0,0.1);
-    --border-bright: rgba(0,0,0,0.18);
-    --text-1: #111114;
-    --text-2: #65656e;
-    --text-3: #a4a4ae;
-    --accent: #3b5fd4;
-    --accent-glow: rgba(59,95,212,0.1);
-    --green: #178a50;
-    --green-bg: rgba(23,138,80,0.05);
-    --green-border: rgba(23,138,80,0.18);
-    --red: #cf2050;
-    --red-bg: rgba(207,32,80,0.05);
-    --red-border: rgba(207,32,80,0.18);
-    --red-glow: rgba(207,32,80,0.06);
-    --amber: #b07800;
-    --amber-bg: rgba(176,120,0,0.05);
-  }
 }
 
 body {
@@ -750,7 +748,10 @@ body {
   <div class="panel-left">
     <div class="prototype-header">
       <h1 id="page-title">System Playground</h1>
-      <span class="step-counter" id="step-counter">Step 0</span>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span class="step-counter" id="step-counter">Step 0</span>
+        <button id="theme-toggle" class="step-counter" style="cursor:pointer;border:1px solid var(--border-mid);" onclick="toggleTheme()" title="Toggle dark/light theme">☀️</button>
+      </div>
     </div>
 
     <div id="prototype">
@@ -1176,6 +1177,26 @@ function selfTest() {
     document.body.prepend(banner);
   }
 }
+
+// =====================================================================
+// Theme Toggle
+// =====================================================================
+
+function toggleTheme() {
+  var isDark = document.documentElement.classList.toggle('dark');
+  localStorage.setItem('theme', isDark ? 'dark' : 'light');
+  document.getElementById('theme-toggle').textContent = isDark ? '☀️' : '🌙';
+}
+
+(function initTheme() {
+  var saved = localStorage.getItem('theme');
+  if (saved === 'dark') {
+    document.documentElement.classList.add('dark');
+    document.getElementById('theme-toggle').textContent = '☀️';
+  } else {
+    document.getElementById('theme-toggle').textContent = '🌙';
+  }
+})();
 
 // =====================================================================
 // Boot
