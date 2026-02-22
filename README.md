@@ -1,4 +1,4 @@
-# tla-spec
+# tlaplus-workflow
 
 Formal verification without learning TLA+. Describe your system through conversation (or point at code), and get back a verified TLA+ spec, an interactive playground, and optionally property-based tests and scaffolded implementation code.
 
@@ -7,7 +7,7 @@ Formal verification without learning TLA+. Describe your system through conversa
 ### From conversation
 
 ```
-/tla-spec
+/tlaplus-workflow
 ```
 
 Walks you through describing your system — entities, states, transitions, constraints, concurrency, edge cases. Then: generate spec → verify → interactive playground → offer implementation scaffolding and tests.
@@ -15,7 +15,7 @@ Walks you through describing your system — entities, states, transitions, cons
 ### From code
 
 ```
-/tla-spec src/booking/
+/tlaplus-workflow src/booking/
 ```
 
 Scans your code for stateful patterns (state machines, locks, queues, shared resources), pre-fills the interview with what it finds, then asks you to confirm and fill in gaps.
@@ -23,7 +23,7 @@ Scans your code for stateful patterns (state machines, locks, queues, shared res
 ### With a structured summary
 
 ```
-/tla-spec summary.md
+/tlaplus-workflow summary.md
 ```
 
 Skip the interview — go straight to: generate spec → verify → animate.
@@ -31,7 +31,7 @@ Skip the interview — go straight to: generate spec → verify → animate.
 ### Typical flow
 
 ```
-/tla-spec
+/tlaplus-workflow
     ↓ interview (or bootstrap from code)
     ↓ specifier agent → .tla + .cfg
     ↓ verifier agent → TLC check + state graph dump
@@ -102,7 +102,7 @@ agents/
   implementer.md     # Spec → code (scaffold or refine)
 
 skills/
-  tla-spec/SKILL.md  # Full pipeline: interview → specify → verify → animate → extras
+  tlaplus-workflow/SKILL.md  # Full pipeline: interview → specify → verify → animate → extras
 
 templates/
   playground.html              # Playground HTML template (graph-walking engine)

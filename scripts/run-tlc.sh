@@ -50,16 +50,28 @@ DUMP_FILE="$ARTIFACT_DIR/states.dot"
 TLC_OUTPUT_FILE="$ARTIFACT_DIR/tlc-output.txt"
 
 # Run TLC
+# Note: bash -c is needed so timeout can kill the entire pipeline (including tee).
+# We re-source resolve-tlc.sh inside the subshell since functions don't cross
+# process boundaries. For --memory mode we pass the jar path directly since we
+# need to control JVM flags.
 set +e
 if [ "$MEMORY" = true ]; then
-  _TLA2TOOLS="$PLUGIN_ROOT/lib/tla2tools.jar"
-  timeout 120 bash -c \
-    'java -Xmx4g -jar "$5" -modelcheck -workers auto -dump dot,actionlabels,colorize "$3" -config "$1" "$2" 2>&1 | tee "$4"' \
-    -- "$CFG_FILE" "$SPEC_FILE" "$DUMP_FILE" "$TLC_OUTPUT_FILE" "$_TLA2TOOLS"
+  if [ ! -f "${_TLA2TOOLS:-}" ]; then
+    echo "--memory requires tla2tools.jar but it's not available." >&2
+    echo "Run: $PLUGIN_ROOT/scripts/setup-tlc.sh" >&2
+    exit 1
+  fi
+  timeout 120 bash -c '
+    java -Xmx4g -jar "$1" -modelcheck -workers auto \
+      -dump dot,actionlabels,colorize "$4" -config "$2" "$3" 2>&1 | tee "$5"
+  ' _ "$_TLA2TOOLS" "$CFG_FILE" "$SPEC_FILE" "$DUMP_FILE" "$TLC_OUTPUT_FILE"
 else
-  timeout 120 bash -c \
-    'run_tlc -modelcheck -workers auto -dump dot,actionlabels,colorize "$3" -config "$1" "$2" 2>&1 | tee "$4"' \
-    -- "$CFG_FILE" "$SPEC_FILE" "$DUMP_FILE" "$TLC_OUTPUT_FILE"
+  timeout 120 bash -c '
+    export CLAUDE_PLUGIN_ROOT="$1"
+    . "$1/scripts/resolve-tlc.sh"
+    run_tlc -modelcheck -workers auto \
+      -dump dot,actionlabels,colorize "$4" -config "$2" "$3" 2>&1 | tee "$5"
+  ' _ "$PLUGIN_ROOT" "$CFG_FILE" "$SPEC_FILE" "$DUMP_FILE" "$TLC_OUTPUT_FILE"
 fi
 TLC_EXIT=$?
 set -e

@@ -1,5 +1,5 @@
 ---
-name: tla-spec
+name: tlaplus-workflow
 description: >
   Full TLA+ pipeline: interview a user (or bootstrap from code) to produce a structured summary,
   generate a TLA+ spec, verify with TLC, build an interactive playground, and offer scaffolding
