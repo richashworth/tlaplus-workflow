@@ -9,7 +9,14 @@
       "WebFetch(domain:will62794.github.io)",
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(chmod +x:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(tail:*)",
+      "Bash(java:*)",
+      "Bash(*scripts/run-tlc.sh*)",
+      "Bash(*scripts/setup-tlc.sh*)",
+      "Bash(*scripts/check-tla-syntax.sh*)",
+      "Bash(*scripts/dot-to-json.py*)",
+      "Bash(*scripts/resolve-tlc.sh*)"
     ]
   }
 }

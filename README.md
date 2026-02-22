@@ -86,8 +86,10 @@ Property-based tests go in your project's existing test directory, following its
 
 ## Requirements
 
-- **Java** — required to run TLC (JDK 11+)
-- **Python 3** — required for `scripts/dot-to-json.py` (stdlib only, no pip packages)
+- **Java 11+** — runs TLC and SANY (`java -jar tla2tools.jar`)
+- **Python 3** — runs `scripts/dot-to-json.py` (stdlib only, no pip packages)
+- **GNU coreutils** — provides `timeout`, used by `run-tlc.sh` to kill TLC after 120 s. Pre-installed on Linux; on macOS: `brew install coreutils`
+- **curl** — downloads `tla2tools.jar` during auto-setup (pre-installed on macOS and most Linux)
 - **TLC model checker** — run `scripts/setup-tlc.sh` to auto-download, or place `tla2tools.jar` in `lib/` manually
 
 ## File Structure
