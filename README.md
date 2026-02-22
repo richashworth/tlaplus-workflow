@@ -112,7 +112,6 @@ skills/
   tlaplus-verify/SKILL.md      # Standalone verification
   tlaplus-animate/SKILL.md     # Standalone animation
   tlaplus-test/SKILL.md        # Standalone test generation
-  tlaplus-animate/templates/   # Playground HTML template
 
 hooks/hooks.json               # SANY syntax check on .tla writes
 scripts/check-tla-syntax.sh    # Hook implementation
