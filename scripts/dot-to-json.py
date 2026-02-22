@@ -588,8 +588,20 @@ def parse_tlc_output(
             })
 
         if back_to is not None:
+            # back_to is a 1-indexed TLC trace number, not a graph state ID.
+            # Resolve it through the already-matched trace entries.
+            back_idx = int(back_to) - 1
+            if 0 <= back_idx < len(trace_entries):
+                back_sid = trace_entries[back_idx]["stateId"]
+            else:
+                print(
+                    f"Warning: Back-to-state index {back_to} out of range "
+                    f"(trace has {len(trace_entries)} entries)",
+                    file=sys.stderr,
+                )
+                back_sid = None
             trace_entries.append({
-                "stateId": back_to,
+                "stateId": back_sid,
                 "action": "Back to state",
             })
 
