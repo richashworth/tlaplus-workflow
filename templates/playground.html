@@ -193,6 +193,18 @@ body {
   transition-duration: 40ms;
 }
 
+.action-group-label {
+  width: 100%;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-3);
+  margin-top: 8px;
+}
+
+.action-group-label:first-child { margin-top: 0; }
+
 .actions-empty {
   color: var(--text-3);
   font-size: 13px;
@@ -291,7 +303,7 @@ body {
 
 .trace-entry {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   padding: 2px 6px;
   border-radius: var(--radius-sm);
   transition: background var(--fast);
@@ -307,8 +319,19 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+.trace-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  background: var(--accent);
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 7px;
+}
+
 .trace-action {
-  color: var(--text-2);
+  color: var(--text-1);
+  font-family: var(--font);
   font-weight: 500;
 }
 
@@ -440,7 +463,7 @@ body {
       <h1 id="page-title">System Playground</h1>
       <div style="display:flex;align-items:center;gap:8px;">
         <span class="step-counter" id="step-counter">Step 0</span>
-        <button id="theme-toggle" class="step-counter" style="cursor:pointer;border:1px solid var(--border-mid);" onclick="toggleTheme()" title="Toggle dark/light theme">☀️</button>
+        <button id="theme-toggle" class="step-counter" style="cursor:pointer;border:1px solid var(--border-mid);" onclick="toggleTheme()" title="Toggle dark/light theme">🌙</button>
       </div>
     </div>
 
@@ -534,6 +557,7 @@ function getAvailableActions() {
   return (GRAPH.transitions[currentStateId] || []).map(function(edge, i) {
     return {
       index: i,
+      action: edge.action,
       label: ACTION_LABELS[edge.label] || edge.label,
       technicalLabel: edge.label,
       target: edge.target
@@ -569,12 +593,31 @@ function renderActions() {
     return;
   }
 
+  // Group by action type
+  var groups = {};
+  var groupOrder = [];
   actions.forEach(function(a) {
-    var btn = document.createElement('button');
-    btn.className = 'action-btn';
-    btn.textContent = a.label;
-    btn.onclick = function() { dispatch(a.index); };
-    grid.appendChild(btn);
+    var key = a.action || '';
+    if (!groups[key]) { groups[key] = []; groupOrder.push(key); }
+    groups[key].push(a);
+  });
+
+  var showHeadings = groupOrder.length >= 2;
+
+  groupOrder.forEach(function(key) {
+    if (showHeadings && key) {
+      var lbl = document.createElement('div');
+      lbl.className = 'action-group-label';
+      lbl.textContent = key;
+      grid.appendChild(lbl);
+    }
+    groups[key].forEach(function(a) {
+      var btn = document.createElement('button');
+      btn.className = 'action-btn';
+      btn.textContent = a.label;
+      btn.onclick = function() { dispatch(a.index); };
+      grid.appendChild(btn);
+    });
   });
 }
 
@@ -587,6 +630,7 @@ function renderTrace() {
   el.innerHTML = traceLog.map(function(entry) {
     return '<div class="trace-entry">' +
       '<span class="trace-step">' + entry.step + '.</span>' +
+      '<span class="trace-dot"></span>' +
       '<span class="trace-action">' + escapeHtml(entry.action) + '</span>' +
       '</div>';
   }).join('');
@@ -632,7 +676,7 @@ function checkInvariants() {
 
 function renderAll() {
   var state = getState();
-  document.getElementById('prototype').innerHTML = state ? renderState(state.vars) : '';
+  document.getElementById('prototype').innerHTML = state ? renderState(state.vars) : '<p style="color:var(--text-3);text-align:center;padding:40px;">State not found in graph.</p>';
   document.getElementById('step-counter').textContent = 'Step ' + traceLog.length;
   renderActions();
   renderTrace();

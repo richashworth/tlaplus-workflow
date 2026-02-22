@@ -64,6 +64,8 @@ If an edge label is already human-readable, keep it as-is. The template falls ba
 
 A function receiving the state's `vars` object (from `state.vars` in the graph) and returning an HTML string. **Theme this to the domain** — the prototype should look like a product mockup, not a state machine debugger.
 
+The state graph is **complete** — `vars` always contains every variable. Never add defensive fallbacks like "State data not available" messages.
+
 The `vars` object has the same shape as the JSON in `states[id].vars`. Use domain-meaningful variable names and visual affordances (colors, icons via Unicode, spatial layout).
 
 ### 3. `DOMAIN_STYLES`
@@ -102,6 +104,7 @@ The playground template lives at `templates/playground.html` (relative to the pl
 Before writing the file, verify:
 - [ ] GRAPH data injected (mechanical copy of the JSON)
 - [ ] renderState displays ALL variables from the state graph
+- [ ] renderState does NOT contain defensive null checks or fallback messages
 - [ ] ACTION_LABELS covers all unique edge labels in the graph
 - [ ] DOMAIN_STYLES themes the prototype to the domain
 - [ ] No external dependencies — everything is inline

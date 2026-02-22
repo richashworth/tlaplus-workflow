@@ -147,9 +147,11 @@ If TLC reports `OutOfMemoryError`, re-run with increased memory:
 "$PLUGIN_ROOT/scripts/run-tlc.sh" --memory "$SPEC_FILE" "$CFG_FILE"
 ```
 
+The `-continue` flag is included so TLC explores the **full state space** even when violations are found. This means all violations are discovered (not just the first) and the state graph dump is complete.
+
 Exit codes:
 - **0** — TLC finished successfully (no violations)
-- **12** — TLC found violations
+- **12** — TLC found one or more violations (with `-continue`, all reachable violations are reported)
 - **124** — timeout (TLC killed after 120 seconds). Report: "TLC is still exploring states after 2 minutes. The state space may be too large — consider reducing CONSTANT values in the .cfg file."
 - **1** — setup error
 

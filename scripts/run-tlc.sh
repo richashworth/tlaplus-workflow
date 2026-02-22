@@ -62,14 +62,14 @@ if [ "$MEMORY" = true ]; then
     exit 1
   fi
   timeout 120 bash -c '
-    java -Xmx4g -jar "$1" -modelcheck -workers auto \
+    java -Xmx4g -jar "$1" -modelcheck -continue -workers auto \
       -dump dot,actionlabels,colorize "$4" -config "$2" "$3" 2>&1 | tee "$5"
   ' _ "$_TLA2TOOLS" "$CFG_FILE" "$SPEC_FILE" "$DUMP_FILE" "$TLC_OUTPUT_FILE"
 else
   timeout 120 bash -c '
     export CLAUDE_PLUGIN_ROOT="$1"
     . "$1/scripts/resolve-tlc.sh"
-    run_tlc -modelcheck -workers auto \
+    run_tlc -modelcheck -continue -workers auto \
       -dump dot,actionlabels,colorize "$4" -config "$2" "$3" 2>&1 | tee "$5"
   ' _ "$PLUGIN_ROOT" "$CFG_FILE" "$SPEC_FILE" "$DUMP_FILE" "$TLC_OUTPUT_FILE"
 fi
