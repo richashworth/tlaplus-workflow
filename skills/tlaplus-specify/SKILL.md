@@ -9,7 +9,7 @@ user-invocable: true
 
 # TLA+ Specify Pipeline
 
-You orchestrate the full specification pipeline. You take a structured system summary and drive it through: specification → verification → animation. You don't do the domain work yourself — you invoke specialist agents and handle the conversation between steps.
+You orchestrate the full specification pipeline. You take a structured system summary and drive it through: specification → verification → playground. You don't do the domain work yourself — you invoke specialist agents and handle the conversation between steps.
 
 If `$ARGUMENTS` is provided, treat it as the structured summary or a path to a file containing one. Otherwise, expect the user to paste a structured summary.
 
@@ -40,51 +40,55 @@ Invoke the **specifier** agent. Pass it the confirmed system summary. It writes 
 Tell the user what was created (file paths) and give a one-line summary of the module scope (e.g., "3 entities, 5 actions, 2 safety invariants, 1 liveness property"). Then ask what they'd like to do next:
 
 - **Walk me through the spec** — summarize the spec in plain language: what the entities are, what transitions exist, what properties are checked, and why. No TLA+ syntax — just the domain story.
-- **Animate it** — skip straight to the interactive playground (Step 3). The spec has not been model-checked yet, so the playground may demonstrate bugs — that's fine if the user wants to explore the design visually first.
-- **Verify it** — run TLC model checking (Step 2) to find design bugs before anything else.
+- **Explore it** — run TLC model checking and build an interactive playground to explore the design (Step 2).
 
 Wait for the user's choice before proceeding.
 
-### Step 2: Verify (loop)
+### Step 2: Verify and Explore
 
-Invoke the **verifier** agent. It runs TLC against the spec.
+This step runs TLC, generates the state graph, and builds the interactive playground.
 
-- **If SANY error (not a violation):** Don't surface parse errors to the user. Route the error message back to the specifier agent to fix the syntax issue, then re-verify. Only escalate to the user if the specifier can't resolve it after 2 attempts.
-- **If violations are found:** Before updating the spec, commit the current version for rollback: `git add .tlaplus/*.tla .tlaplus/*.cfg && git commit -m "tlaplus: pre-refinement v$(git log --oneline .tlaplus/ | wc -l | tr -d ' ')"`. Then present the verifier's plain-language scenario to the user. Ask how the system should actually behave — frame it as a concrete question with options derived from the violation. Then update the spec (re-invoke specifier or edit directly) and re-verify. Repeat until TLC reports no violations.
-- **If clean:** Report the stats and move on.
+1. **Invoke the verifier agent.** It runs TLC with `-dump dot,actionlabels,colorize` to dump the full state graph alongside checking invariants. It also runs `dot-to-json.py` to produce `.tlaplus/<Module>_state-graph.json`.
 
-### Step 3: Animate
+2. **Handle SANY errors** (syntax errors, not design violations): Don't surface to the user. Route to the specifier agent to fix. Re-verify. Only escalate after 2 failed attempts.
 
-Invoke the **animator** agent. It reads the verified spec and produces `.tlaplus/playground.html`.
+3. **If state graph is too large** (verifier reports exit code 2 from dot-to-json.py): Tell the user the state space is too large for an interactive playground. Suggest reducing constants or opening the `.tla` file in [Spectacle](https://github.com/will62794/spectacle). Continue with text-based verification output only.
 
-**After the animator finishes, validate the playground:**
+4. **Invoke the animator agent** to build the playground from the state graph JSON. It reads `state-graph.json` and the system summary, generates `renderState`, `DOMAIN_STYLES`, and `ACTION_LABELS`, and writes `.tlaplus/playground.html`. Open it automatically.
 
-Read the `.tla` spec, the `.cfg` file, and the generated `.tlaplus/playground.html`. Check coverage:
+5. **If violations were found**, present them to the user via AskUserQuestion. The playground has violation scenarios pinned (labeled v1, v2, etc.) so the user can explore them visually, then come back to Claude Code to discuss:
 
-1. Every variable from the `VARIABLES` declaration in the `.tla` file has a corresponding key in `INITIAL_STATE`.
-2. Every action disjunct from `Next` in the `.tla` file is represented in `ACTIONS` (parameterized actions may expand to multiple entries or use a dynamic generator — that's fine, but no action should be entirely absent).
-3. Every `INVARIANT` from the `.cfg` file appears in the `INVARIANTS` array.
+   First AskUserQuestion — list all violations:
+   > "TLC found {N} scenarios where your design rules are violated. Explore them in the playground (the pinned scenarios match the IDs below), then tell me which to address."
 
-If anything is missing, re-invoke the animator with the specific list of missing items. Max 2 retries. If still incomplete after 2 retries, give the user the verified spec and warn: "The interactive playground is incomplete — [list missing items]. You have the verified spec at `.tlaplus/<Module>.tla`. I can try regenerating the playground later if you'd like." Do not silently continue as if the playground is fine.
+   Options (one per violation):
+   - **v1: {invariant_name} — {summary}**
+   - **v2: {invariant_name} — {summary}**
+   - "None of these are real problems"
 
-The animator opens the playground automatically. Tell the user:
+   For each selected violation, follow-up AskUserQuestion:
+   > "How should the system handle this scenario?"
 
-> Click through actions to explore how your system behaves. The sidebar tracks which rules hold at every step.
-> If something looks wrong, hit a report button — it copies a trace you can paste back here.
+   Options:
+   - "This shouldn't be possible — fix the design" — update the spec to add a guard or constraint that prevents this scenario
+   - "My requirements allow this — update the invariant" — relax or remove the invariant
+   - "Let's discuss this more" — present the verifier's narrative translation of the violation for deeper discussion
 
-**This step is mandatory.** The playground is the payoff — never skip it.
+   After the user's choice: commit current spec for rollback (`git add .tlaplus/*.tla .tlaplus/*.cfg && git commit -m "tlaplus: pre-refinement"`), update the spec, re-run TLC + state graph + playground. Repeat until clean.
 
-### Step 4: Offer extras
+6. **If clean** (no violations): The playground opens in exploration mode. Proceed to Step 3.
+
+### Step 3: Offer extras
 
 After the playground is open:
 
 - **Code changes:** If the workflow started from code (the system summary has a source path), offer to apply spec-driven changes back to the source via the **implementer** agent.
-- **Property-based tests** are available separately via `/tlaplus-test` — but don't offer them here. They require implementation code to test against, which may not exist yet. The user can invoke `/tlaplus-test` when they're ready.
+- **Property-based tests** are available separately via `/tlaplus-test` — but don't offer them here. They require implementation code to test against, which may not exist yet.
 
 ## Rules
 
-- **Stop after spec creation.** Always pause at Step 1.5 to let the user choose their next step. Don't auto-advance into verification or animation.
-- **Don't stop between verify and animate.** Once the user picks "Verify it" and verification passes clean, proceed directly to animation without asking again.
-- **Do stop for violations.** When TLC finds a bug, present it and get the user's input before fixing.
-- **Do stop for extras.** Tests and code changes are opt-in. Offer, don't push.
-- **Domain knowledge lives in agents.** You handle sequencing and user interaction. The specifier knows TLA+, the verifier knows TLC, the animator knows HTML. Don't duplicate their expertise.
+- **Stop after spec creation.** Always pause at Step 1.5 to let the user choose their next step. Don't auto-advance.
+- **Don't stop between verify and animate.** Once verification finishes and the state graph is built, proceed directly to building the playground.
+- **Do stop for violations.** When TLC finds bugs, present via AskUserQuestion and get user input before fixing.
+- **Do stop for extras.** Tests and code changes are opt-in.
+- **Domain knowledge lives in agents.** You handle sequencing and user interaction. The specifier knows TLA+, the verifier knows TLC, the animator knows HTML.

@@ -15,6 +15,6 @@ If `$ARGUMENTS` is provided, use it as the path to the `.tla` file. Otherwise, l
 ## Process
 
 1. **Find the spec.** Locate the `.tla` file and its `.cfg` file (same basename, same directory).
-2. **Invoke the verifier agent.** Pass it the spec path. It handles SANY, TLC, output parsing, and narrative translation.
+2. **Invoke the verifier agent.** Pass it the spec path. It handles SANY, TLC (with `-dump` for state graph), output parsing, state graph generation, and narrative translation.
 3. **If violations are found:** Present the verifier's narrative to the user. Ask how the system should actually behave. Update the spec based on their answer. Re-invoke the verifier. Repeat until clean.
-4. **If clean:** Report the stats. Done.
+4. **If clean:** Report the stats and note the state graph location: "State graph written to `.tlaplus/<Module>_state-graph.json` — use `/tlaplus-animate` to build an interactive playground."

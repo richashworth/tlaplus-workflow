@@ -101,9 +101,11 @@ Rules for CONSTANT assignments:
 
 Write the `.cfg` file to the same directory as the `.tla` file, using the same basename.
 
-## 3.5. Estimate State Space
+## 3.5. Estimate and Fit State Space
 
-Before running TLC, estimate the state space to avoid runaway model checking.
+Before running TLC, estimate the state space and **adjust the `.cfg` until it fits**.
+
+### Estimation
 
 1. Read the `.cfg` file and note the size of each CONSTANT set (e.g., `Actors = {a1, a2, a3}` → 3 elements).
 2. For each variable, estimate its domain size based on the constants:
@@ -112,38 +114,43 @@ Before running TLC, estimate the state space to avoid runaway model checking.
    - A sequence bounded by length N over set S has roughly `|S|^N` values
    - An element of a finite set has `|S|` possible values
 3. Multiply all variable domain sizes for a rough total state count.
-4. If the estimate exceeds ~10 million states:
-   - Warn: "Estimated state space is ~[N] states — TLC may take a long time or run out of memory."
-   - Suggest reducing CONSTANT sizes (e.g., 3 actors → 2)
-   - Suggest adding symmetry reduction if entity sets are interchangeable (e.g., `SYMMETRY Permutations(Actors)`)
-   - Proceed with TLC anyway (the estimate is a rough upper bound), but use `-Xmx4g` proactively.
-5. If the estimate is under ~10 million, proceed normally.
+
+### Adjustment (if estimate exceeds ~10 million states)
+
+Do not warn and proceed — **fix it first**. Apply these reductions in order until the estimate is under ~10 million:
+
+1. **Add symmetry reduction.** If entity sets are interchangeable (most are), add `SYMMETRY Permutations(SetName)` to the `.cfg`. This divides the state space by `n!` for each symmetric set.
+2. **Shrink the largest constant sets.** Reduce by one element at a time (e.g., `{a1, a2, a3}` → `{a1, a2}`). Minimum 2 elements per set — bugs need at least 2 participants to manifest concurrency issues.
+3. **Re-estimate** after each change.
+
+Tell the user what you changed and why:
+"Reduced [ConstantName] from [N] to [M] elements and added symmetry reduction to keep model checking fast (~[estimate] states). This still finds the same classes of bugs — concurrency issues show up with 2 participants."
+
+### If already under ~10 million
+
+Proceed to TLC with no changes.
 
 ## 4. TLC Invocation
 
-### Basic run
+**Always use this exact command pattern** (with `timeout` wrapper):
 
 ```bash
-run_tlc -modelcheck -config "$CFG_FILE" "$SPEC_FILE"
+DUMP_FILE="${SPEC_FILE%.tla}_states.dot"
+TLC_OUTPUT_FILE="${SPEC_FILE%.tla}_tlc_output.txt"
+timeout 120 bash -c 'run_tlc -modelcheck -workers auto -dump dot,actionlabels,colorize "$3" -config "$1" "$2" 2>&1 | tee "$4"' -- "$CFG_FILE" "$SPEC_FILE" "$DUMP_FILE" "$TLC_OUTPUT_FILE"
 ```
 
-### With parallelism (use by default when available)
-
-```bash
-run_tlc -modelcheck -workers auto -config "$CFG_FILE" "$SPEC_FILE"
-```
+If the exit code is 124 (timeout killed it), report:
+"TLC is still exploring states after 2 minutes. The state space may be too large — consider reducing CONSTANT values in the .cfg file."
 
 ### With increased memory (use if TLC reports OutOfMemoryError)
 
 ```bash
+DUMP_FILE="${SPEC_FILE%.tla}_states.dot"
+TLC_OUTPUT_FILE="${SPEC_FILE%.tla}_tlc_output.txt"
 _TLA2TOOLS="$PLUGIN_ROOT/lib/tla2tools.jar"
-java -Xmx4g -jar "$_TLA2TOOLS" -modelcheck -workers auto -config "$CFG_FILE" "$SPEC_FILE"
+timeout 120 bash -c 'java -Xmx4g -jar "$5" -modelcheck -workers auto -dump dot,actionlabels,colorize "$3" -config "$1" "$2" 2>&1 | tee "$4"' -- "$CFG_FILE" "$SPEC_FILE" "$DUMP_FILE" "$TLC_OUTPUT_FILE" "$_TLA2TOOLS"
 ```
-
-### Timeout
-
-Set a timeout of 120 seconds. If TLC hasn't finished, kill it and report:
-"TLC is still exploring states after 2 minutes. The state space may be too large — consider reducing CONSTANT values in the .cfg file."
 
 Key flags:
 - `-workers auto` — use all available cores
@@ -152,6 +159,8 @@ Key flags:
 - `-deadlock` — add this flag ONLY if the spec intentionally allows deadlock (terminating systems)
 
 Run from the directory containing the `.tla` file so relative paths resolve correctly.
+
+**Important:** When calling the Bash tool, set its timeout to 130000 (130 seconds) so the `timeout` command has a chance to kill TLC before the Bash tool itself times out.
 
 ## 5. Parse TLC Output
 
@@ -243,7 +252,29 @@ For each `State N:` block:
 3. Capture all `/\ var = value` assignments
 4. Diff against previous state to identify which variables changed
 
+## 5.5. Generate State Graph
+
+After TLC finishes (whether clean or with violations), generate the state graph JSON:
+
+```bash
+PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(pwd)}"
+python3 "$PLUGIN_ROOT/scripts/dot-to-json.py" \
+  --dot "$DUMP_FILE" \
+  --cfg "$CFG_FILE" \
+  --tlc-output "$TLC_OUTPUT_FILE" \
+  --output "${SPEC_FILE%.tla}_state-graph.json"
+```
+
+Exit codes:
+- **0**: Success — state graph written
+- **1**: Error — DOT file couldn't be parsed. Warn and continue with text-based narrative only.
+- **2**: State graph too large (>50K states). Report to the pipeline: "The state graph has too many states for an interactive playground. Consider reducing constants or opening the `.tla` file directly in [Spectacle](https://github.com/will62794/spectacle)."
+
+If `dot-to-json.py` fails or is missing, continue with text-based violation narrative as fallback. The state graph is not required for verification — it enhances the playground.
+
 ## 6. Counterexample-to-Narrative Translation
+
+> **Note:** When the state graph is available (section 5.5), violations are presented visually in the playground. This narrative translation is the **fallback** for when the playground can't be generated (state graph too large, script failure, etc.). The pipeline orchestrator decides which presentation to use.
 
 This is the core value. TLC counterexamples are state traces — sequences of variable assignments. You must translate them into stories a domain expert would understand.
 
@@ -269,9 +300,12 @@ For each state transition (State N → State N+1):
 > 2. **[Domain action]** — [what happened and why it was allowed]
 > 3. **[Domain action]** — [what happened — THIS is where it breaks]
 >
-> **The bug:** [one sentence summary]
+> **What happened:** [one sentence summary of the scenario]
 > **Violated property:** [invariant name] — [what it means in plain English]
-> **Suggested fix:** [concrete suggestion, e.g., "Add a guard to `Release` that checks `lockHolder[resource] = node`"]
+>
+> **Is this a problem in your design, or did I write the spec wrong?**
+> - If this scenario *shouldn't* be possible: [concrete suggestion, e.g., "We could add a guard to `Release` that checks the lock holder"]
+> - If this scenario *is* expected: the invariant may need updating — tell me what the correct rule should be
 
 For liveness violations, extend the narrative with fairness analysis:
 
@@ -282,7 +316,8 @@ For liveness violations, extend the narrative with fairness analysis:
 
 ### Rules
 
-- **NEVER soften violations.** Do not say "potential issue" or "edge case." Say "bug" or "violation." TLC found a real, reachable execution — it is a concrete bug.
+- **Present, don't diagnose.** TLC found a reachable scenario — but you don't know whether it's a bug in the design or a mistake in the spec. Frame violations as: "TLC found this scenario is possible in your design. Is this a real problem, or did I misunderstand your requirements?" Never auto-fix without the user's input.
+- **Distinguish spec bugs from design bugs.** A spec bug is when the TLA+ doesn't match what the user described (e.g., a missing guard they specified in the interview). A design bug is when the user's requirements genuinely allow a problematic scenario they hadn't considered. The user needs to know which they're looking at.
 - **Use specific names and values** from the trace. Use concrete entity names, not generic placeholders.
 - **For temporal (liveness) violations**, explain the loop: "The system enters a cycle where [X happens repeatedly] but [Y never happens]. This violates the property that [Y] should eventually occur."
 
@@ -323,4 +358,4 @@ After presenting a violation:
 3. **Translate everything.** The user should understand the scenario without knowing any TLA+ notation.
 4. **Suggest fixes.** After describing a violation, briefly suggest what guard or constraint might fix it.
 5. **Don't over-explain success.** A clean run gets a one-liner. Violations get the detailed narrative.
-6. **Suggest next step.** On clean result: "The spec is verified. Next: generate an interactive playground with `/tlaplus-animate`, or property-based tests with `/tlaplus-test`."
+6. **Report graph availability.** On clean result, note whether the state graph was generated successfully: "State graph written to [path]" or "State graph generation skipped — [reason]."
