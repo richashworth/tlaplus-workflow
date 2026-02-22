@@ -43,7 +43,7 @@ The JSON has this structure:
 
 ## What You Generate
 
-You produce **3 pieces** that plug into the template:
+You produce **5 pieces** that plug into the template:
 
 ### 1. `ACTION_LABELS`
 
@@ -68,7 +68,45 @@ The state graph is **complete** — `vars` always contains every variable. Never
 
 The `vars` object has the same shape as the JSON in `states[id].vars`. Use domain-meaningful variable names and visual affordances (colors, icons via Unicode, spatial layout).
 
-### 3. `DOMAIN_STYLES`
+### 3. `INVARIANT_LABELS`
+
+An object mapping TLA+ invariant/property names to one-line PM-readable descriptions of what the rule means. Every name in `GRAPH.invariants` must have an entry. These appear as tooltip text next to a `?` icon on each invariant badge.
+
+Example:
+```javascript
+const INVARIANT_LABELS = {
+  "TypeOK": "All values stay within expected types",
+  "MutualExclusion": "Two processes never hold the lock at the same time",
+  "NoStarvation": "Every waiting process eventually gets served"
+};
+```
+
+### 4. `SCENARIO_LABELS`
+
+An object mapping violation IDs (`v1`, `v2`, ...) to structured metadata for each scenario. Every violation in `GRAPH.violations` must have an entry. These power the scenario dropdown and description panel.
+
+Each entry has:
+- `title` (string, <60 chars): short domain-language bug name for the dropdown
+- `description` (string): 1-2 sentence explanation of what goes wrong and why
+- `rule` (string|null): the TLA+ invariant/property name that is violated, null for deadlocks
+
+Example:
+```javascript
+const SCENARIO_LABELS = {
+  "v1": {
+    "title": "Two clients grab same lock",
+    "description": "Both clients acquire the lock simultaneously because the check-and-set is not atomic.",
+    "rule": "MutualExclusion"
+  },
+  "v2": {
+    "title": "System freezes with pending requests",
+    "description": "All processes end up waiting for each other, creating a circular dependency.",
+    "rule": null
+  }
+};
+```
+
+### 5. `DOMAIN_STYLES`
 
 Additional CSS that themes the playground to the domain. The template uses CSS custom properties (`--bg`, `--surface`, `--text-1`, `--accent`, `--green`, `--red`, `--amber`, etc.) — you can override these for domain theming.
 
@@ -87,6 +125,8 @@ The playground template lives at `templates/playground.html` (relative to the pl
 4. Replace the content between markers:
    - **GRAPH**: Inject the entire state-graph.json contents as `const GRAPH = <json>;`
    - **ACTION_LABELS**: Inject your generated label mapping
+   - **INVARIANT_LABELS**: Inject your generated invariant descriptions
+   - **SCENARIO_LABELS**: Inject your generated scenario metadata
    - **renderState**: Inject your generated function
    - **DOMAIN_STYLES**: Inject your generated CSS (in the `<style>` block)
 5. Update the page `<title>` to match the domain
@@ -106,6 +146,8 @@ Before writing the file, verify:
 - [ ] renderState displays ALL variables from the state graph
 - [ ] renderState does NOT contain defensive null checks or fallback messages
 - [ ] ACTION_LABELS covers all unique edge labels in the graph
+- [ ] INVARIANT_LABELS has an entry for every name in `GRAPH.invariants`
+- [ ] SCENARIO_LABELS has an entry for every violation ID in `GRAPH.violations`
 - [ ] DOMAIN_STYLES themes the prototype to the domain
 - [ ] No external dependencies — everything is inline
 - [ ] The HTML file opens correctly in a browser with no console errors

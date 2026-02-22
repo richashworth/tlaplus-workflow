@@ -252,7 +252,35 @@ body {
   font-weight: 500;
   transition: all 250ms ease;
   border-left: 3px solid transparent;
+  position: relative;
 }
+
+.invariant-help {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px; height: 14px;
+  font-size: 10px; font-weight: 700;
+  border-radius: 50%;
+  border: 1px solid var(--border-mid);
+  color: var(--text-3);
+  margin-left: 4px; flex-shrink: 0;
+  cursor: help;
+}
+
+.invariant-tooltip {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 6px); left: 10px;
+  background: var(--text-1); color: var(--bg);
+  font-size: 11px; font-weight: 400;
+  padding: 4px 10px; border-radius: 4px;
+  white-space: normal; max-width: 240px;
+  z-index: 10; pointer-events: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.invariant-badge:hover .invariant-tooltip { display: block; }
 
 .invariant-badge.pass {
   background: var(--green-bg);
@@ -358,17 +386,28 @@ body {
 
 .scenario-description {
   display: none;
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--text-2);
-  padding: 8px 10px;
-  margin-bottom: 8px;
+  font-size: 12px; line-height: 1.5;
+  color: var(--text-2); margin-bottom: 8px;
   background: var(--surface-hover);
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
+  overflow: hidden;
 }
-
 .scenario-description.visible { display: block; }
+
+.scenario-desc-row {
+  padding: 6px 10px; display: flex; gap: 6px;
+}
+.scenario-desc-row + .scenario-desc-row {
+  border-top: 1px solid var(--border);
+}
+.scenario-desc-label {
+  flex-shrink: 0; font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--text-3); min-width: 52px; padding-top: 1px;
+}
+.scenario-desc-value { color: var(--text-1); }
+.scenario-desc-value.rule-broken { color: var(--red); font-weight: 600; }
 
 .scenario-controls {
   display: flex;
@@ -592,6 +631,14 @@ const GRAPH = {"initialStateId":null,"states":{},"transitions":{},"invariants":[
 const ACTION_LABELS = {};
 // === END GENERATED ===
 
+// === GENERATED: INVARIANT_LABELS ===
+const INVARIANT_LABELS = {};
+// === END GENERATED ===
+
+// === GENERATED: SCENARIO_LABELS ===
+const SCENARIO_LABELS = {};
+// === END GENERATED ===
+
 // === GENERATED: renderState ===
 function renderState(vars) {
   return '<p style="color:var(--text-3);padding:40px;text-align:center;">No prototype renderer loaded.</p>';
@@ -713,9 +760,15 @@ function checkInvariants() {
 
     var badge = document.createElement('div');
     badge.className = 'invariant-badge ' + (violated ? 'fail' : 'pass');
+    var displayName = name;
+    var tooltip = INVARIANT_LABELS[name];
     badge.innerHTML =
       '<span class="invariant-icon">' + (violated ? '&#10007;' : '&#10003;') + '</span>' +
-      '<span>' + escapeHtml(name) + '</span>';
+      '<span>' + escapeHtml(displayName) + '</span>' +
+      (tooltip
+        ? '<span class="invariant-help">?</span>' +
+          '<span class="invariant-tooltip">' + escapeHtml(tooltip) + '</span>'
+        : '');
     listEl.appendChild(badge);
   });
 
@@ -761,12 +814,18 @@ function initScenarios() {
   var scenarios = [];
 
   // Build scenarios from violation traces
-  (GRAPH.violations || []).forEach(function(v) {
+  (GRAPH.violations || []).forEach(function(v, idx) {
     if (!v.trace || v.trace.length === 0) return;
-    var label = v.id + ': ' + (v.invariant || v.property || v.type);
+    var sl = SCENARIO_LABELS[v.id];
+    var label = sl && sl.title
+      ? 'Scenario ' + (idx + 1) + ': ' + sl.title
+      : v.id + ': ' + (v.invariant || v.property || v.type);
     scenarios.push({
       name: label,
-      description: v.summary || '',
+      description: sl && sl.description ? sl.description : (v.summary || ''),
+      rule: sl && sl.rule != null ? sl.rule : (v.invariant || v.property || null),
+      type: v.type,
+      traceLen: v.trace.length,
       trace: v.trace
     });
   });
@@ -793,7 +852,7 @@ function initScenarios() {
       activeScenario = null;
       scenarioIndex = -1;
       descEl.classList.remove('visible');
-      descEl.textContent = '';
+      descEl.innerHTML = '';
     } else {
       var s = scenarios[parseInt(val)];
       activeScenario = s;
@@ -801,13 +860,23 @@ function initScenarios() {
       resetPlayground();
       activeScenario = s;
       select.value = val;
-      if (s.description) {
-        descEl.textContent = s.description;
-        descEl.classList.add('visible');
-      } else {
-        descEl.classList.remove('visible');
-        descEl.textContent = '';
+      var descHtml = '';
+      if (s.rule && s.type !== 'deadlock') {
+        var ruleLabel = INVARIANT_LABELS[s.rule] || s.rule;
+        descHtml += '<div class="scenario-desc-row">' +
+          '<span class="scenario-desc-label">Rule</span>' +
+          '<span class="scenario-desc-value rule-broken">' + escapeHtml(ruleLabel) + '</span></div>';
       }
+      if (s.description) {
+        descHtml += '<div class="scenario-desc-row">' +
+          '<span class="scenario-desc-label">Bug</span>' +
+          '<span class="scenario-desc-value">' + escapeHtml(s.description) + '</span></div>';
+      }
+      descHtml += '<div class="scenario-desc-row">' +
+        '<span class="scenario-desc-label">Steps</span>' +
+        '<span class="scenario-desc-value">' + s.traceLen + ' steps to failure</span></div>';
+      descEl.innerHTML = descHtml;
+      descEl.classList.add('visible');
     }
     updateScenarioControls();
   });
