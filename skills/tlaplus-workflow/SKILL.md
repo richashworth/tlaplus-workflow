@@ -226,25 +226,25 @@ This step runs TLC, generates the state graph, and builds the interactive playgr
 
 4. **Invoke the animator agent** to build the playground from the state graph JSON. It reads `state-graph.json` and the system summary, generates `renderState`, `DOMAIN_STYLES`, and `ACTION_LABELS`, and writes `.tlaplus/<ModuleName>/playground.html`. Open it automatically.
 
-5. **If violations were found**, present them to the user via AskUserQuestion. The playground has violation scenarios pinned (labeled v1, v2, etc.) so the user can explore them visually, then come back to Claude Code to discuss:
+5. **If violations were found**, present them in plain text — list each violation with its ID, the broken rule, and a one-sentence summary of the scenario:
 
-   First AskUserQuestion — list all violations:
-   > "TLC found {N} scenarios where your design rules are violated. Explore them in the playground (the pinned scenarios match the IDs below), then tell me which to address."
+   > TLC found {N} scenarios where your design rules are broken:
+   >
+   > - **v1: {invariant_name}** — {summary}
+   > - **v2: {invariant_name}** — {summary}
+   > - ...
+   >
+   > These are pinned as scenarios in the playground so you can step through them visually.
 
-   Options (one per violation):
-   - **v1: {invariant_name} — {summary}**
-   - **v2: {invariant_name} — {summary}**
-   - "None of these are real problems"
-
-   For each selected violation, follow-up AskUserQuestion:
-   > "How should the system handle this scenario?"
+   Then use AskUserQuestion:
+   > "What would you like to do?"
 
    Options:
-   - "This shouldn't be possible — fix the design" — update the spec to add a guard or constraint that prevents this scenario
-   - "My requirements allow this — update the invariant" — relax or remove the invariant
-   - "Let's discuss this more" — present the verifier's narrative translation of the violation for deeper discussion
+   - "Fix the design" — discuss which violations to fix, then update the spec to add guards or constraints that prevent them
+   - "Explore in the playground" — re-open the playground and guide the user to the Scenarios panel (e.g., "Select a scenario from the dropdown, then use **Next Step** or **Play All** to walk through it"). After the user has explored, re-ask this same question.
+   - "Continue anyway" — the user considers the violations acceptable. Note which violations are being accepted, then proceed to Step 3 normally.
 
-   After the user's choice: commit current spec for rollback (`git add .tlaplus/<ModuleName>.tla .tlaplus/<ModuleName>.cfg && git commit -m "tlaplus: pre-refinement"`), update the spec, re-run TLC + state graph + playground. Repeat until clean.
+   **If the user chooses "Fix the design":** Discuss the violations conversationally. The user may want to fix some and accept others — let them explain in their own words. For each violation they want fixed, understand whether to add a guard/constraint or relax the invariant. Then: commit current spec for rollback (`git add .tlaplus/<ModuleName>.tla .tlaplus/<ModuleName>.cfg && git commit -m "tlaplus: pre-refinement"`), update the spec, re-run TLC + state graph + playground. Repeat until the user is satisfied.
 
 6. **If clean** (no violations): The playground opens in exploration mode. Proceed to Step 3.
 
