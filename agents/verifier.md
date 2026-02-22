@@ -158,9 +158,9 @@ Exit codes:
 The script prints artifact paths at the end (after a `---` separator):
 
 ```
-artifact_dir=.tlaplus/LockManager
-dump_file=.tlaplus/LockManager/states.dot
-tlc_output=.tlaplus/LockManager/tlc-output.txt
+artifact_dir=specs/LockManager
+dump_file=specs/LockManager/states.dot
+tlc_output=specs/LockManager/tlc-output.txt
 tlc_exit=0
 ```
 
@@ -277,13 +277,54 @@ Exit codes:
 
 If `dot-to-json.py` fails or is missing, continue with text-based violation narrative as fallback. The state graph is not required for verification — it enhances the playground.
 
-## 6. Counterexample-to-Narrative Translation
+## 6. Return Format
 
-> **Note:** When the state graph is available (section 5.5), violations are presented visually in the playground. This narrative translation is the **fallback** for when the playground can't be generated (state graph too large, script failure, etc.). The pipeline orchestrator decides which presentation to use.
+Your job ends at reporting what TLC found. Return a structured summary to the orchestrating skill — do not interact with the user, suggest fixes, or start a refinement loop. The skill handles all user interaction.
 
-This is the core value. TLC counterexamples are state traces — sequences of variable assignments. You must translate them into stories a domain expert would understand.
+### Structured summary
 
-### Translation protocol
+Always return these fields:
+
+- **status**: `clean` | `violations` | `error`
+- **stats**: states found, distinct states, depth
+- **state_graph**: `generated` | `too_large` | `failed` (and path if generated)
+
+For each violation, include:
+- **type**: invariant | deadlock | temporal
+- **name**: the TLA+ property name (e.g., `MutualExclusion`, `EventualResponse`)
+- **summary**: one sentence in domain language describing the scenario
+- **trace_states**: number of states in the counterexample trace
+
+### Example return (violations)
+
+```
+status: violations
+violation_count: 2
+stats: 2847 states generated, 1523 distinct states, depth 14
+state_graph: generated (specs/LockManager/state-graph.json)
+
+violations:
+  1. type: invariant, name: MutualExclusion
+     summary: Two clients hold the same lock simultaneously when one acquires while the other's release is in progress.
+     trace_states: 4
+  2. type: temporal, name: EventualRelease
+     summary: A client holds a lock forever because competing acquire requests keep preempting the release action.
+     trace_states: 6 (loop at state 3)
+```
+
+### Example return (clean)
+
+```
+status: clean
+stats: 2847 states generated, 1523 distinct states, depth 14
+state_graph: generated (specs/LockManager/state-graph.json)
+```
+
+### Fallback narrative
+
+Only produce the full narrative translation below when you report `state_graph: failed` or `state_graph: too_large`. When the state graph is available, the playground handles visualization — return summaries only.
+
+#### Narrative translation protocol (fallback only)
 
 For each state transition (State N → State N+1):
 
@@ -295,7 +336,7 @@ For each state transition (State N → State N+1):
 
 4. **Build the narrative step by step**: Number each step. Bold the domain action. Show the raw variable values in parentheses for traceability.
 
-### Narrative format
+#### Narrative format (fallback only)
 
 > **Violation found: [Invariant Plain English Name]**
 >
@@ -307,45 +348,25 @@ For each state transition (State N → State N+1):
 >
 > **What happened:** [one sentence summary of the scenario]
 > **Violated property:** [invariant name] — [what it means in plain English]
->
-> **Is this a problem in your design, or did I write the spec wrong?**
-> - If this scenario *shouldn't* be possible: [concrete suggestion, e.g., "We could add a guard to `Release` that checks the lock holder"]
-> - If this scenario *is* expected: the invariant may need updating — tell me what the correct rule should be
 
-For liveness violations, extend the narrative with fairness analysis:
+For liveness violations (fallback only), extend with fairness analysis:
 
 > **Loop analysis:** The system cycles through states [N]→[M]→...→[N] forever.
 > **Stuck action:** [action name] — [why it should eventually fire but doesn't]
 > **Fairness diagnosis:** [one of: "needs strong fairness (action is repeatedly but not continuously enabled)", "needs weak fairness (action is continuously enabled but never taken)", or "not a fairness issue — the action is never enabled in the loop"]
-> **Suggested fix:** [e.g., "Add `SF_vars(AcquireLock)` to the Spec definition" or "Add a new action that enables progress from state X"]
 
-### Rules
+#### Narrative rules (fallback only)
 
-- **Present, don't diagnose.** TLC found a reachable scenario — but you don't know whether it's a bug in the design or a mistake in the spec. Frame violations as: "TLC found this scenario is possible in your design. Is this a real problem, or did I misunderstand your requirements?" Never auto-fix without the user's input.
-- **Distinguish spec bugs from design bugs.** A spec bug is when the TLA+ doesn't match what the user described (e.g., a missing guard they specified in the interview). A design bug is when the user's requirements genuinely allow a problematic scenario they hadn't considered. The user needs to know which they're looking at.
 - **Use specific names and values** from the trace. Use concrete entity names, not generic placeholders.
-- **For temporal (liveness) violations**, explain the loop: "The system enters a cycle where [X happens repeatedly] but [Y never happens]. This violates the property that [Y] should eventually occur."
-
-  **Fairness diagnosis for temporal violations:**
-  When a temporal property is violated, perform these additional steps:
+- **For temporal (liveness) violations**, explain the loop and perform fairness diagnosis:
   1. Identify the "stuck" action — the action that the liveness property expects to eventually fire but never does in the loop.
-  2. Check whether that action is **enabled** in any state within the loop. Look at its guards against the variable values in the looping states.
-  3. If the action is enabled in some loop states but not others (it flickers on and off due to other actions), the fix is **strong fairness** (`SF_vars(ActionName)`): "The action is repeatedly possible but keeps getting preempted. Adding strong fairness for this action guarantees it eventually fires."
-  4. If the action is continuously enabled throughout the loop but never fires, the fix is **weak fairness** (`WF_vars(ActionName)`) — or check that the existing `WF_vars(Next)` covers it: "The action is always possible in this loop but never taken. Weak fairness should prevent this — check that `Spec` includes `WF_vars(Next)` or `WF_vars(ActionName)`."
-  5. If the action is never enabled in the loop, the issue is not fairness — it's a missing transition or guard problem: "The action can never fire in this cycle because [guard condition] is never satisfied. The spec may need a new action or a relaxed guard to make progress possible."
-- **For deadlocks**, explain what's stuck: "The system reaches a state where [describe state] and no action can proceed because [explain which guards block every possible action]."
+  2. Check whether that action is **enabled** in any state within the loop.
+  3. If enabled in some loop states but not others → strong fairness (`SF_vars(ActionName)`).
+  4. If continuously enabled but never fires → weak fairness (`WF_vars(ActionName)`).
+  5. If never enabled in the loop → missing transition or guard problem.
+- **For deadlocks**, explain what's stuck: which guards block every possible action.
 
-## 7. Refinement Loop
-
-After presenting a violation:
-
-1. **Ask the user** what the correct behavior should be. Frame it as a concrete question with specific options derived from the violation scenario.
-2. **Relay the correction** to the spec-writing process. The user's answer becomes a new requirement.
-3. **After the spec is updated**, re-run from step 2 (SANY check first, then TLC).
-4. **Repeat** until TLC reports no violations.
-5. **On clean result**, report the final stats and confirm: "The spec now passes all invariants and properties across [N] distinct states. The design handles [summarize the scenarios that were previously broken]."
-
-## 8. Common TLC Issues and Fixes
+## 7. Common TLC Issues and Fixes
 
 | Symptom | Cause | Fix |
 |---|---|---|
@@ -360,7 +381,7 @@ After presenting a violation:
 
 1. **Be honest.** If the spec has a bug, say so directly. The whole point is to find bugs before they ship.
 2. **Be concrete.** Use entity names, values, and state details from the trace. Never be vague.
-3. **Translate everything.** The user should understand the scenario without knowing any TLA+ notation.
-4. **Suggest fixes.** After describing a violation, briefly suggest what guard or constraint might fix it.
-5. **Don't over-explain success.** A clean run gets a one-liner. Violations get the detailed narrative.
-6. **Report graph availability.** On clean result, note whether the state graph was generated successfully: "State graph written to [path]" or "State graph generation skipped — [reason]."
+3. **Return structured results.** The skill handles user interaction — you return data, not conversation. Only produce narrative as a fallback when the state graph is unavailable.
+4. **Don't over-explain success.** A clean run gets a one-liner. Violations get summaries (or full narrative as fallback).
+5. **Report graph availability.** Always include `state_graph` status and path in your return.
+6. **No user interaction.** Do not ask the user questions, suggest fixes, or start refinement loops. The skill owns all user-facing decisions.

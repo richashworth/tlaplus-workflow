@@ -45,7 +45,7 @@ Skip the interview — go straight to: generate spec → verify → animate.
 Already have a spec? Just ask Claude directly — it picks the right agent:
 
 ```
-"Verify .tlaplus/LockManager.tla"      # Runs the verifier agent
+"Verify specs/LockManager.tla"         # Runs the verifier agent
 "Build a playground for LockManager"    # Runs the animator agent
 "Generate tests from the TLA+ spec"    # Runs the test-writer agent
 ```
@@ -69,17 +69,17 @@ A SANY syntax check runs automatically whenever a `.tla` file is written or edit
 
 ## Output
 
-All TLA+ artifacts go in `.tlaplus/`:
+The pipeline asks where to store spec files on first run (default: `specs/`). If the project already has a directory with `.tla` files, it reuses that automatically.
 
 ```
-.tlaplus/
-  LockManager.tla           # TLA+ specification
-  LockManager.cfg           # TLC model-checking config
-  LockManager/              # Derived artifacts
-    states.dot              # TLC state graph dump (DOT format)
-    tlc-output.txt          # Captured TLC stdout/stderr
-    state-graph.json        # Parsed state graph (drives the playground)
-    playground.html         # Interactive prototype (opens in browser)
+specs/                          # (or .tlaplus/, or custom path)
+  LockManager.tla               # TLA+ specification
+  LockManager.cfg               # TLC model-checking config
+  LockManager/                  # Derived artifacts
+    states.dot                  # TLC state graph dump (DOT format)
+    tlc-output.txt              # Captured TLC stdout/stderr
+    state-graph.json            # Parsed state graph (drives the playground)
+    playground.html             # Interactive prototype (opens in browser)
 ```
 
 Property-based tests go in your project's existing test directory, following its conventions.

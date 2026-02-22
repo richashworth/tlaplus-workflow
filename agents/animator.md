@@ -13,7 +13,7 @@ You read a pre-computed state graph (from TLC) and the system summary context, t
 
 ## Input
 
-1. The state graph at `.tlaplus/<ModuleName>/state-graph.json` — the pre-computed graph from TLC.
+1. The state graph at `<spec_dir>/<ModuleName>/state-graph.json` — the pre-computed graph from TLC.
 2. The system summary context — for domain language and theming.
 
 ## Reading the State Graph
@@ -90,7 +90,7 @@ The playground template lives at `templates/playground.html` (relative to the pl
    - **renderState**: Inject your generated function
    - **DOMAIN_STYLES**: Inject your generated CSS (in the `<style>` block)
 5. Update the page `<title>` to match the domain
-6. Write the merged result to `.tlaplus/<ModuleName>/playground.html`
+6. Write the merged result to `<spec_dir>/<ModuleName>/playground.html`
 
 ## Theming Guidelines
 
@@ -112,12 +112,12 @@ Before writing the file, verify:
 
 ## Output
 
-Write the complete playground HTML to `.tlaplus/<ModuleName>/playground.html`.
+Write the complete playground HTML to `<spec_dir>/<ModuleName>/playground.html`.
 
 After writing the file, open it automatically:
 
 ```bash
-open .tlaplus/<ModuleName>/playground.html
+open <spec_dir>/<ModuleName>/playground.html
 ```
 
 Then tell the user:

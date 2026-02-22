@@ -14,8 +14,8 @@ You read a TLA+ specification and generate property-based tests that exercise th
 
 ## Input
 
-1. The TLA+ spec at `.tlaplus/<ModuleName>.tla`
-2. The TLC config at `.tlaplus/<ModuleName>.cfg`
+1. The TLA+ spec at `<spec_dir>/<ModuleName>.tla` (path provided by the pipeline)
+2. The TLC config at `<spec_dir>/<ModuleName>.cfg`
 3. The project's existing codebase — scan for test framework and language conventions.
 4. **Optional: scaffolded file path** — if running after the implementer's scaffold mode, the path to the generated state machine module. Import state types, action functions, and invariant predicates directly from this module rather than re-implementing them in the test file.
 

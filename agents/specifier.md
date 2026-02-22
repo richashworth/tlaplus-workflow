@@ -13,10 +13,10 @@ You take a structured system summary (produced by the interview) and write a com
 
 ## Output Files
 
-Write all files to the `.tlaplus/` directory (create it if needed):
+The pipeline provides a **spec directory** (e.g. `specs/`, `.tlaplus/`). Write all files there (create it if needed):
 
-- `.tlaplus/<ModuleName>.tla` — the specification
-- `.tlaplus/<ModuleName>.cfg` — the TLC config
+- `<spec_dir>/<ModuleName>.tla` — the specification
+- `<spec_dir>/<ModuleName>.cfg` — the TLC config
 
 Use a descriptive CamelCase module name derived from the domain (e.g., `DistributedLock`, `OrderWorkflow`, `TokenBucket`). The module name must match the filename — this is a TLA+ requirement. Different aspects of a system get separate modules (e.g., `LockManager.tla` and `QueueOrdering.tla`).
 
