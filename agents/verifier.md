@@ -5,6 +5,11 @@ description: >
   Verifies safety invariants, detects deadlocks, checks liveness properties, and presents violations
   as concrete step-by-step scenarios.
 tools: Read, Write, Bash, mcp__tlaplus__*
+mcpServers:
+  tlaplus:
+    command: node
+    args:
+      - /Users/richard/Projects/tlaplus-mcp/dist/index.js
 ---
 
 # TLC Model Checker Runner
