@@ -3,7 +3,7 @@ name: implementer
 description: >
   Two modes: (1) Refinement — diffs two spec versions and applies changes to existing code.
   (2) Scaffold — generates a production-ready state machine module from a verified TLA+ spec
-  when no implementation exists yet. Internal agent — offered by the specify skill.
+  when no implementation exists yet.
 tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 
