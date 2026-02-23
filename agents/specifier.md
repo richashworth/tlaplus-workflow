@@ -1,9 +1,9 @@
 ---
 name: specifier
 description: >
-  Internal agent for writing TLA+ specifications from structured requirements. Translates a
-  structured system summary into a formal TLA+ spec (.tla) and model-checking config (.cfg).
-  Not user-facing — called by the pipeline after the interview produces a confirmed summary.
+  Translates a structured system summary into a formal TLA+ spec (.tla) and model-checking
+  config (.cfg). Takes entities, transitions, constraints, and concurrency rules and produces
+  a complete, verifiable specification.
 tools: Read, Write, Edit, Bash, Glob
 ---
 

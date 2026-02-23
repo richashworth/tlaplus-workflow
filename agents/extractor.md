@@ -3,8 +3,7 @@ name: extractor
 description: >
   Reads source code to identify stateful and concurrent patterns — state machines, shared resources,
   locks, queues, lifecycle management, distributed protocols. Produces a draft structured summary
-  (entities + transitions) that bootstraps the interview process. Internal agent — called by the
-  interview skill when the user provides a code path.
+  (entities + transitions) that can bootstrap the specification process.
 tools: Read, Bash, Glob, Grep
 ---
 
