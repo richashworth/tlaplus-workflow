@@ -10,7 +10,7 @@ Clone this repo into your Claude Code plugins directory:
 git clone https://github.com/richardashworth/tlaplus-workflow ~/.claude/plugins/tlaplus-workflow
 ```
 
-The first run auto-downloads `tla2tools.jar` — no manual setup needed if Java and curl are available.
+Requires the [tlaplus-mcp](https://github.com/richardashworth/tlaplus-mcp) MCP server, which handles TLC/SANY toolchain management.
 
 ## Quick Start
 
@@ -62,7 +62,7 @@ Already have a spec? Just ask Claude directly — it picks the right agent:
 
 ## Agents
 
-Agents are internal workers invoked by the skill. They contain all the domain expertise.
+Specialist workers invoked by the skill or used standalone. They contain all the domain expertise.
 
 | Agent | Role |
 |---|---|
@@ -96,11 +96,9 @@ Property-based tests go in your project's existing test directory, following its
 
 ## Requirements
 
-- **Java 11+** — runs TLC and SANY (`java -jar tla2tools.jar`)
-- **Python 3** — runs `scripts/dot-to-json.py` (stdlib only, no pip packages)
-- **GNU coreutils** — provides `timeout` (Linux) or `gtimeout` (macOS), used by `run-tlc.sh` to kill TLC after 120 s. Pre-installed on Linux; on macOS: `brew install coreutils`
-- **curl** — downloads `tla2tools.jar` during auto-setup (pre-installed on macOS and most Linux)
-- **TLC model checker** — run `scripts/setup-tlc.sh` to auto-download, or place `tla2tools.jar` in `lib/` manually
+- **Java 11+** — runs TLC and SANY
+- **Node.js 18+** — runs the tlaplus-mcp MCP server
+- **[tlaplus-mcp](https://github.com/richardashworth/tlaplus-mcp)** — MCP server that wraps the TLA+ toolchain. Auto-downloads `tla2tools.jar` on first use
 
 ## File Structure
 
@@ -119,16 +117,11 @@ skills/
 templates/
   playground.html              # Playground HTML template (graph-walking engine)
 
-hooks/hooks.json               # SANY syntax check on .tla writes
+hooks/
+  hooks.json                   # SANY syntax check on .tla writes
+  check-tla-syntax.sh          # Hook implementation (uses tlaplus-mcp's jar)
 
-scripts/
-  check-tla-syntax.sh           # Hook implementation
-  setup-tlc.sh                  # Downloads tla2tools.jar to lib/
-  resolve-tlc.sh                # Shared TLC resolution (sourced by other scripts)
-  run-tlc.sh                    # TLC execution with timeout, dump, output capture, and state graph conversion
-  dot-to-json.py                # Converts TLC DOT state dump to playground JSON
-
+.mcp.json                      # MCP server configuration (tlaplus-mcp)
 .claude-plugin/plugin.json     # Plugin manifest (name, description, author)
-.claude/settings.json          # Pre-configured permissions for scripts
-lib/tla2tools.jar              # TLC model checker (auto-downloaded)
+.claude/settings.json          # Pre-configured permissions
 ```

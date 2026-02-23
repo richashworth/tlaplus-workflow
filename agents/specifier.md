@@ -139,38 +139,16 @@ Rules for the config:
 
 After writing the `.tla` and `.cfg` files, run SANY to confirm the spec is syntactically correct and well-formed. **Do not run TLC model checking** — that is the verifier's job.
 
-### Resolve TLC tooling
-
-Source the plugin's resolution script:
-
-```bash
-PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(pwd)}"
-. "$PLUGIN_ROOT/scripts/resolve-tlc.sh"
-```
-
-This gives you `run_sany <file>`. Use **only** this function — never call `java -jar` directly or search the filesystem for jars.
-
 ### Run SANY
 
-```bash
-run_sany "$SPEC_FILE"
-```
+Use the `tla_parse` MCP tool with `tla_file` set to the spec file path.
 
-SANY clean output looks like:
-
-```
-****** SANY2 Version 2.2
-Parsing file /path/to/Spec.tla
-...
-*** Errors: 0
-```
-
-- If `*** Errors: 0` — the spec is valid. Return the spec files to the pipeline.
-- If errors are reported — read the error messages, fix the `.tla` file, and re-run SANY. Repeat until the spec parses cleanly. Do this silently — do not surface parse errors to the user.
+- If `valid` is `true` — the spec is valid. Return the spec files to the pipeline.
+- If `valid` is `false` — read the error messages from the `errors` array (each has `message` and `location` with `file`, `line`, `col`). Fix the `.tla` file and re-run `tla_parse`. Repeat until the spec parses cleanly. Do this silently — do not surface parse errors to the user.
 
 ### What NOT to do
 
-- **Never run TLC** (`run_tlc`, `run-tlc.sh`, or any model-checking command). The specifier only validates syntax. The verifier agent is the sole agent that runs TLC.
+- **Never run TLC** (`tlc_check`, `tlc_simulate`, or any model-checking tool). The specifier only validates syntax. The verifier agent is the sole agent that runs TLC.
 - **Never attempt to verify invariants or find violations.** Your job ends when SANY reports zero errors.
 
 ## Fairness

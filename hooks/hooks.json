@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/check-tla-syntax.sh"
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/check-tla-syntax.sh"
           }
         ]
       }
