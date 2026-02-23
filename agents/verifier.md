@@ -161,8 +161,16 @@ The script prints artifact paths at the end (after a `---` separator):
 artifact_dir=specs/LockManager
 dump_file=specs/LockManager/states.dot
 tlc_output=specs/LockManager/tlc-output.txt
+state_graph=specs/LockManager/state-graph.json
+state_graph_status=generated
 tlc_exit=0
 ```
+
+The `state_graph_status` field indicates whether the playground state graph was produced:
+- **generated** — `state-graph.json` is ready for the playground
+- **too_large** — state graph exceeds 50K states; report to the pipeline
+- **failed** — DOT parsing failed; continue with text-based narrative
+- **skipped** — no DOT file was produced (e.g., TLC errored before dumping)
 
 Parse these to get the paths for subsequent steps. The `-deadlock` flag is NOT included by default — add it manually only if the spec intentionally allows deadlock (terminating systems).
 
@@ -258,25 +266,6 @@ For each `State N:` block:
 3. Capture all `/\ var = value` assignments
 4. Diff against previous state to identify which variables changed
 
-## 5.5. Generate State Graph
-
-After TLC finishes (whether clean or with violations), generate the state graph JSON. Use the artifact paths from `run-tlc.sh` output:
-
-```bash
-python3 "$PLUGIN_ROOT/scripts/dot-to-json.py" \
-  --dot "$ARTIFACT_DIR/states.dot" \
-  --cfg "$CFG_FILE" \
-  --tlc-output "$ARTIFACT_DIR/tlc-output.txt" \
-  --output "$ARTIFACT_DIR/state-graph.json"
-```
-
-Exit codes:
-- **0**: Success — state graph written
-- **1**: Error — DOT file couldn't be parsed. Warn and continue with text-based narrative only.
-- **2**: State graph too large (>50K states). Report to the pipeline: "The state graph has too many states for an interactive playground. Consider reducing constants or opening the `.tla` file directly in [Spectacle](https://github.com/will62794/spectacle)."
-
-If `dot-to-json.py` fails or is missing, continue with text-based violation narrative as fallback. The state graph is not required for verification — it enhances the playground.
-
 ## 6. Return Format
 
 Your job ends at reporting what TLC found. Return a structured summary to the orchestrating skill — do not interact with the user, suggest fixes, or start a refinement loop. The skill handles all user interaction.
@@ -287,7 +276,7 @@ Always return these fields:
 
 - **status**: `clean` | `violations` | `error`
 - **stats**: states found, distinct states, depth
-- **state_graph**: `generated` | `too_large` | `failed` (and path if generated)
+- **state_graph**: use the `state_graph_status` value from `run-tlc.sh` output (`generated` | `too_large` | `failed` | `skipped`), and include the `state_graph` path if generated
 
 For each violation, include:
 - **category**: `spec_error` | `requirement_conflict` (see below)
@@ -427,5 +416,5 @@ For liveness violations (fallback only), extend with fairness analysis:
 2. **Be concrete.** Use entity names, values, and state details from the trace. Never be vague.
 3. **Return structured results.** The skill handles user interaction — you return data, not conversation. Only produce narrative as a fallback when the state graph is unavailable.
 4. **Don't over-explain success.** A clean run gets a one-liner. Violations get summaries (or full narrative as fallback).
-5. **Report graph availability.** Always include `state_graph` status and path in your return.
+5. **Report graph availability.** Always include `state_graph_status` and `state_graph` path from `run-tlc.sh` output in your return.
 6. **No user interaction.** Do not ask the user questions, suggest fixes, or start refinement loops. The skill owns all user-facing decisions.

@@ -10,7 +10,7 @@ The `tlaplus-workflow` plugin currently orchestrates TLC via bash scripts (`reso
 
 - Agents must parse unstructured TLC output themselves
 - The verifier agent shells out with `timeout 120 run_tlc ...` and tees to a file
-- `dot-to-json.py` is invoked via `python3` and communicates through exit codes (0=ok, 1=parse failed, 2=too large)
+- `dot-to-json.py` is called automatically by `run-tlc.sh` after TLC finishes, communicating status via the script's output footer (`state_graph_status=generated|too_large|failed|skipped`)
 - Error handling is scattered across bash scripts, Python, and agent prompts
 
 An MCP server replaces all of this with structured JSON tools. The plugin's agents get reliable typed responses; the scripts and Python parser move into the server.

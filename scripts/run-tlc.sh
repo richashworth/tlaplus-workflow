@@ -7,6 +7,7 @@
 # Creates <ModuleName>/ directory alongside the spec with:
 #   states.dot       — TLC state graph dump (DOT format)
 #   tlc-output.txt   — captured TLC stdout/stderr
+#   state-graph.json — parsed state graph for the playground (if DOT was produced)
 #
 # Exit codes:
 #   0     — TLC finished (check tlc-output.txt for results)
@@ -87,11 +88,34 @@ fi
 TLC_EXIT=$?
 set -e
 
+# Convert DOT state graph to JSON for the playground
+STATE_GRAPH_FILE="$ARTIFACT_DIR/state-graph.json"
+STATE_GRAPH_STATUS="skipped"
+if [ -f "$DUMP_FILE" ] && [ -s "$DUMP_FILE" ]; then
+  set +e
+  python3 "$PLUGIN_ROOT/scripts/dot-to-json.py" \
+    --dot "$DUMP_FILE" \
+    --cfg "$CFG_FILE" \
+    --tlc-output "$TLC_OUTPUT_FILE" \
+    --output "$STATE_GRAPH_FILE" 2>&1
+  DOT_EXIT=$?
+  set -e
+  if [ $DOT_EXIT -eq 0 ]; then
+    STATE_GRAPH_STATUS="generated"
+  elif [ $DOT_EXIT -eq 2 ]; then
+    STATE_GRAPH_STATUS="too_large"
+  else
+    STATE_GRAPH_STATUS="failed"
+  fi
+fi
+
 # Report paths for caller
 echo "---"
 echo "artifact_dir=$ARTIFACT_DIR"
 echo "dump_file=$DUMP_FILE"
 echo "tlc_output=$TLC_OUTPUT_FILE"
+echo "state_graph=$STATE_GRAPH_FILE"
+echo "state_graph_status=$STATE_GRAPH_STATUS"
 echo "tlc_exit=$TLC_EXIT"
 
 exit $TLC_EXIT

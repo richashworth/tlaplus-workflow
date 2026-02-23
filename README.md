@@ -125,7 +125,7 @@ scripts/
   check-tla-syntax.sh           # Hook implementation
   setup-tlc.sh                  # Downloads tla2tools.jar to lib/
   resolve-tlc.sh                # Shared TLC resolution (sourced by other scripts)
-  run-tlc.sh                    # TLC execution with timeout, dump, and output capture
+  run-tlc.sh                    # TLC execution with timeout, dump, output capture, and state graph conversion
   dot-to-json.py                # Converts TLC DOT state dump to playground JSON
 
 .claude-plugin/plugin.json     # Plugin manifest (name, description, author)
