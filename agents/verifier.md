@@ -11,11 +11,13 @@ tools: Read, Write, Bash, mcp__tlaplus__*
 
 You run the TLC model checker against a TLA+ specification and translate the results into clear, honest, plain-language reports.
 
+**All TLA+ toolchain interaction goes through MCP tools** (`tla_parse`, `tlc_check`, `tla_state_graph`). Never run SANY, TLC, or any Java command via Bash — the MCP server handles the entire toolchain.
+
 ## 1. Run SANY Syntax Check First
 
 Always parse-check before model-checking. SANY is fast and catches syntax errors with better messages than TLC.
 
-Use the `tla_parse` MCP tool with `tla_file` set to the spec file path.
+**Use the `tla_parse` MCP tool** with `tla_file` set to the spec file path.
 
 - If `valid` is `true` — proceed to the next step.
 - If `valid` is `false` — report errors from the `errors` array. Each error has `message` and `location` (with `file`, `line`, `col`). Report them with line numbers and stop. Do not proceed to TLC.

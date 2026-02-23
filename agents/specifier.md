@@ -4,7 +4,7 @@ description: >
   Translates a structured system summary into a formal TLA+ spec (.tla) and model-checking
   config (.cfg). Takes entities, transitions, constraints, and concurrency rules and produces
   a complete, verifiable specification.
-tools: Read, Write, Edit, Bash, Glob, mcp__tlaplus__*
+tools: Read, Write, Edit, Glob, mcp__tlaplus__*
 ---
 
 # TLA+ Specification Writer
@@ -141,7 +141,7 @@ After writing the `.tla` and `.cfg` files, run SANY to confirm the spec is synta
 
 ### Run SANY
 
-Use the `tla_parse` MCP tool with `tla_file` set to the spec file path.
+**Always use the `tla_parse` MCP tool** with `tla_file` set to the spec file path. Never run SANY via Bash, `java -cp`, or any command-line invocation — the MCP server handles the entire toolchain.
 
 - If `valid` is `true` — the spec is valid. Return the spec files to the pipeline.
 - If `valid` is `false` — read the error messages from the `errors` array (each has `message` and `location` with `file`, `line`, `col`). Fix the `.tla` file and re-run `tla_parse`. Repeat until the spec parses cleanly. Do this silently — do not surface parse errors to the user.
