@@ -5,11 +5,6 @@ description: >
   Verifies safety invariants, detects deadlocks, checks liveness properties, and presents violations
   as concrete step-by-step scenarios.
 tools: Read, Write, Bash, mcp__tlaplus__*
-mcpServers:
-  tlaplus:
-    command: node
-    args:
-      - /Users/richard/Projects/tlaplus-mcp/dist/index.js
 ---
 
 # TLC Model Checker Runner
@@ -168,6 +163,8 @@ The `tlc_check` response lists violations with summary info:
 - `type`: `"invariant"`, `"deadlock"`, or `"temporal"`
 - `name`: the TLA+ property name (e.g., `MutualExclusion`) — may be absent for deadlocks
 - `summary`: a brief description
+
+Note: in the playground state graph JSON (from `tla_state_graph`), violation traces use `invariant` or `property` instead of `name` to identify the violated property.
 
 ### Reading counterexample traces
 
