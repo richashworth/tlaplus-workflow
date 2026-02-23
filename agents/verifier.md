@@ -4,7 +4,7 @@ description: >
   Runs the TLC model checker against TLA+ specifications and translates results to plain language.
   Verifies safety invariants, detects deadlocks, checks liveness properties, and presents violations
   as concrete step-by-step scenarios.
-tools: Read, Write, Bash
+tools: Read, Write, Bash, mcp__tlaplus__*
 ---
 
 # TLC Model Checker Runner
