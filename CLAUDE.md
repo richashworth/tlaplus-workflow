@@ -8,7 +8,7 @@ Six agents, one skill, one MCP server:
 
 - **Skill** (`skills/tlaplus-workflow/SKILL.md`) — orchestrates the pipeline and owns all user interaction. Agents never talk to the user directly.
 - **Agents** (`agents/*.md`) — extractor, specifier, verifier, animator, test-writer, implementer. Each has a single responsibility and communicates via files and structured output.
-- **MCP server** (`tlaplus-mcp`) — wraps the TLA+ toolchain (TLC, SANY, PlusCal). Agents call MCP tools (`tla_parse`, `tlc_check`, `tla_state_graph`, etc.) — never Java/Bash directly.
+- **MCP server** (`tlaplus-mcp`) — wraps the TLA+ toolchain (TLC, SANY, PlusCal). Agents call MCP tools (`tla_parse`, `tlc_check`, `tla_state_graph`, etc.) — **never run Java, `tla2tools.jar`, or TLC/SANY via Bash**. The MCP server is the only interface to the TLA+ toolchain.
 
 ## Critical path
 
