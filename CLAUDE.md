@@ -18,5 +18,5 @@ Six agents, one skill, one MCP server:
 
 - The **structured system summary** (9-section markdown) is the handoff format between interview/extractor and specifier. See the skill for the format.
 - MCP tool contracts are documented in `mcp-server-reqts.md`.
-- The post-write hook (`hooks/check-tla-syntax.sh`) runs SANY on `.tla` files using the jar at `$HOME/.tlaplus-mcp/lib/tla2tools.jar`.
+- The post-write hook (`hooks/check-tla-syntax.sh`) runs SANY on `.tla` files using the jar at `$HOME/.tlaplus-mcp/lib/tla2tools.jar`. Hook registration is in `hooks/hooks.json` (triggers on Write and Edit of `.tla` files).
 - `templates/playground.html` is the playground template — the deterministic shell (UI chrome, state engine, sidebar). The animator never modifies it; instead it creates a `playground/` subdirectory inside `<spec_dir>/<ModuleName>/` and writes `playground-gen.js` (data + render functions) and `playground-gen.css` (domain styles) there alongside a copy of the template. This keeps playground artefacts separate from spec files (`.tla`, `.cfg`, `state-graph.json`). The template loads the gen files at runtime via `<script src>` and `<link>`.
