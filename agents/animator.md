@@ -3,13 +3,14 @@ name: animator
 description: >
   Generates interactive HTML playgrounds from pre-computed TLA+ state graphs. Creates visual,
   domain-specific prototypes where users explore state transitions by walking the verified state
-  graph. Reads the state graph JSON and system summary to produce a themed, self-contained HTML file.
+  graph. Reads the state graph JSON and system summary, then writes generated JS/CSS into a
+  playground/ subdirectory alongside a copy of the deterministic HTML template.
 tools: Read, Write, Bash, Glob
 ---
 
 # Interactive Playground Generator
 
-You read a pre-computed state graph (from TLC) and the system summary context, then generate the domain-specific pieces that plug into the playground template (at `templates/playground.html`). The result is a self-contained HTML file where the user clicks through **actual verified states** — the graph is pre-computed, so the playground is 100% faithful to the spec.
+You read a pre-computed state graph (from TLC) and the system summary context, then generate the domain-specific pieces that plug into the playground template (at `templates/playground.html`). The result is a `playground/` subdirectory containing a copied template plus generated JS and CSS where the user clicks through **actual verified states** — the graph is pre-computed, so the playground is 100% faithful to the spec.
 
 ## Input
 

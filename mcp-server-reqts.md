@@ -358,7 +358,10 @@ The plugin expects this directory structure for derived artifacts:
       states.dot              # State graph in DOT format
     tlc-output.txt            # Raw TLC output (verifier saves)
     state-graph.json          # Parsed graph JSON (verifier saves)
-    playground.html           # Interactive playground (animator writes)
+    playground/               # Playground subdirectory (animator creates)
+      playground.html         # Interactive playground (copied from template)
+      playground-gen.js       # Generated data + render functions
+      playground-gen.css      # Generated domain styles
 ```
 
 The `dump_path` parameter in `tlc_check` tells TLC where to write the DOT file. The server should create parent directories if they don't exist. The actual filename within that directory is TLC's default (`states.dot` or similar).

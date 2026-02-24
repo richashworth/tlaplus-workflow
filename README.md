@@ -45,7 +45,7 @@ Skip the interview — go straight to: generate spec → verify → animate.
     ↓ interview (or bootstrap from code)
     ↓ specifier agent → .tla + .cfg
     ↓ verifier agent → TLC check + state graph dump
-    ↓ animator agent → playground.html (opens in browser)
+    ↓ animator agent → playground/ (opens in browser)
     ↓ violations? → explore in playground, discuss in Claude Code
     ↓ offer: implementer (scaffold or refine), test-writer
 ```
@@ -89,7 +89,10 @@ specs/                          # (or .tlaplus/, or custom path)
     states.dot                  # TLC state graph dump (DOT format)
     tlc-output.txt              # Captured TLC stdout/stderr
     state-graph.json            # Parsed state graph (drives the playground)
-    playground.html             # Interactive prototype (opens in browser)
+    playground/                 # Playground subdirectory
+      playground.html           # Interactive prototype (opens in browser)
+      playground-gen.js         # Generated data + render functions
+      playground-gen.css        # Generated domain styles
 ```
 
 Property-based tests go in your project's existing test directory, following its conventions.
