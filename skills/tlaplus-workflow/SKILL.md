@@ -24,10 +24,14 @@ You drive the complete pipeline from system description to verified specificatio
    > **Entities:** [list each entity with type and states]
    > **State transitions:** [list each transition]
    > **Gaps I noticed:** [list anything missing or ambiguous]
-   >
-   > Does this look right? Correct anything that's off before we continue.
 
-   Wait for explicit user confirmation or corrections before proceeding. Do not skip ahead.
+   Use AskUserQuestion:
+   > "Does this look right?"
+
+   Options:
+   - "Looks good — continue" — proceed to Phase 3
+   - "Some corrections" — the user provides corrections in their answer; apply them and re-present
+   - "Start the interview from scratch" — ignore extractor findings and begin at Phase 1
 3. Skip to **Phase 3 (Constraints)** — the extractor covers Phases 1-2.
 
 **If `$ARGUMENTS` is a structured summary** (contains the `## System:` header and the required sections):
@@ -55,6 +59,14 @@ Ask:
 
 Capture for each entity: name, whether it's a resource (finite, shared) or an actor (initiates actions), quantity bounds.
 
+**Gate:** Present what you've captured as a table or list. Use AskUserQuestion:
+> "**Phase 1: Entities** — here's what I have so far: [list]. Is this complete?"
+
+Options:
+- "Looks complete — next phase" — proceed to Phase 2
+- "Need to add/change something" — the user provides additions or corrections; update and re-present
+- "Not sure yet — ask me more" — continue probing with follow-up questions, then re-present
+
 ### Phase 2: States and Transitions
 
 Find what states each entity can be in and what moves it between them.
@@ -66,6 +78,14 @@ Ask:
 - "What's the starting state for a new [entity]?"
 
 Capture for each entity: enumerated states, initial state, every transition as (from_state, trigger, to_state).
+
+**Gate:** Present a state machine summary for each entity (states + transitions). Use AskUserQuestion:
+> "**Phase 2: States & Transitions** — here's the state machine for each entity: [summary]. Is this complete?"
+
+Options:
+- "Looks complete — next phase" — proceed to Phase 3
+- "Need to add/change something" — the user provides additions or corrections; update and re-present
+- "Not sure yet — ask me more" — continue probing with follow-up questions, then re-present
 
 ### Phase 3: Constraints
 
@@ -81,6 +101,14 @@ Ask:
 
 Capture: every "should never" statement, every "must always" statement, every "must eventually" statement, every resource bound.
 
+**Gate:** Present the rules in three groups (never / always / eventually). Use AskUserQuestion:
+> "**Phase 3: Constraints** — here are the rules I've captured: [list by group]. Is this complete?"
+
+Options:
+- "Looks complete — next phase" — proceed to Phase 4
+- "Need to add/change something" — the user provides additions or corrections; update and re-present
+- "Not sure yet — ask me more" — continue probing with follow-up questions, then re-present
+
 ### Phase 4: Concurrency
 
 Find what can happen simultaneously and what conflicts arise.
@@ -92,6 +120,14 @@ Ask:
 - "Can a [timer/expiry/external event] fire while a [user action] is in progress?"
 
 Capture: which actors can act simultaneously, conflict resolution rules, atomicity requirements.
+
+**Gate:** Present the concurrency model. Use AskUserQuestion:
+> "**Phase 4: Concurrency** — here's how simultaneous actions work: [summary]. Is this right?"
+
+Options:
+- "Looks right — next phase" — proceed to Phase 5
+- "Need to add/change something" — the user provides additions or corrections; update and re-present
+- "Not sure yet — ask me more" — continue probing with follow-up questions, then re-present
 
 ### Phase 5: Edge Cases and Failure Modes
 
@@ -109,6 +145,14 @@ Use these patterns — substitute actual entities/states/actions from earlier ph
 - "What happens if [actor] disappears (closes browser, crashes) mid-[action]?"
 
 Don't accept vague answers. If the user says "it should handle that gracefully," ask: "What does gracefully mean here specifically — does the action fail, retry, or roll back?"
+
+**Gate:** Present the edge cases and failure modes captured. Use AskUserQuestion:
+> "**Phase 5: Edge Cases** — here are the failure scenarios and edge cases: [list]. Any others?"
+
+Options:
+- "That covers it — move to summary" — proceed to Completeness Checklist
+- "Need to add/change something" — the user provides additions or corrections; update and re-present
+- "Not sure yet — ask me more" — continue probing with follow-up questions, then re-present
 
 ### Completeness Checklist
 
@@ -179,7 +223,15 @@ For each "must eventually" property, specify:
 
 Do not add sections. Do not omit sections. Every field must have a concrete value. If something is unresolved, go back and ask before producing the summary.
 
-Present the summary to the user and ask them to confirm or correct it. Once confirmed, proceed directly to the Pipeline — do not ask "would you like me to continue?".
+Present the summary to the user. Use AskUserQuestion:
+> "Here's the complete system summary. Ready to generate the spec?"
+
+Options:
+- "Looks good — generate the spec" — proceed to the Pipeline
+- "Some corrections" — the user provides corrections; update the summary and re-present
+- "Go back to phase [N]" — reopen the specified interview phase
+
+Once confirmed, proceed directly to the Pipeline — do not ask "would you like me to continue?".
 
 ---
 
@@ -285,7 +337,14 @@ Options:
 - "Refine the visual" — the user wants to iterate on the Visual tab's appearance. Discuss what they'd like changed (layout, colors, icons, grouping) and re-invoke the animator to update `renderStateVisual`. This is a cosmetic loop — no spec or verification changes needed.
 - "Continue anyway" — the user considers the violations acceptable. Note which violations are being accepted, then proceed to Step 6 normally.
 
-**If the user chooses "Fix the design":** Discuss the violations conversationally. The user may want to fix some and accept others — let them explain in their own words. For each violation they want fixed, understand whether to add a guard/constraint or relax the invariant. Then: ask the user if they'd like to commit the current spec before making changes (for easy rollback). If they agree, commit it. Then update the spec and re-run from Step 5.1. Repeat until the user is satisfied.
+**If the user chooses "Fix the design":** Discuss the violations conversationally. The user may want to fix some and accept others — let them explain in their own words. For each violation they want fixed, understand whether to add a guard/constraint or relax the invariant. Then use AskUserQuestion:
+> "Want me to commit the current spec before I make changes? (Makes it easy to roll back.)"
+
+Options:
+- "Yes, commit first" — commit, then update the spec
+- "No, just make the changes" — update without committing
+
+Then update the spec and re-run from Step 5.1. Repeat until the user is satisfied.
 
 **If clean** (no violations): give a one-line summary of stats (e.g., "N states found, M distinct — no violations"). Then use AskUserQuestion:
 > "What would you like to do next?"
@@ -330,4 +389,4 @@ After the playground is open, what you offer depends on whether implementation c
 2. **Be adversarial about edge cases.** Your job is to find the scenarios they haven't thought about.
 3. **Never assume.** If something is ambiguous, ask.
 4. **Constraints are sacred.** Spend extra time getting these right — they define what "correct" means.
-5. **Keep it conversational.** You're a thoughtful colleague at a whiteboard, not a requirements-gathering form.
+5. **Structured but conversational.** Each phase is a gate — present what you've captured, get confirmation, then move on. But within each phase, probe conversationally using the user's language. The gates keep things complete; the conversation within keeps things natural.
