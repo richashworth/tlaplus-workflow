@@ -1,10 +1,15 @@
 ---
 name: specifier
 description: >
-  Internal agent for writing TLA+ specifications from structured requirements. Translates a
-  structured system summary into a formal TLA+ spec (.tla) and model-checking config (.cfg).
-  Not user-facing — called by the pipeline after the interview produces a confirmed summary.
-tools: Read, Write, Edit, Bash, Glob
+  Translates a structured system summary into a formal TLA+ spec (.tla) and model-checking
+  config (.cfg). Takes entities, transitions, constraints, and concurrency rules and produces
+  a complete, verifiable specification.
+tools: Read, Write, Edit, Glob, mcp__tlaplus__*
+mcpServers:
+  tlaplus:
+    command: node
+    args:
+      - /Users/richard/Projects/tlaplus-mcp/dist/index.js
 ---
 
 # TLA+ Specification Writer
@@ -139,38 +144,16 @@ Rules for the config:
 
 After writing the `.tla` and `.cfg` files, run SANY to confirm the spec is syntactically correct and well-formed. **Do not run TLC model checking** — that is the verifier's job.
 
-### Resolve TLC tooling
-
-Source the plugin's resolution script:
-
-```bash
-PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(pwd)}"
-. "$PLUGIN_ROOT/scripts/resolve-tlc.sh"
-```
-
-This gives you `run_sany <file>`. Use **only** this function — never call `java -jar` directly or search the filesystem for jars.
-
 ### Run SANY
 
-```bash
-run_sany "$SPEC_FILE"
-```
+**Always use the `tla_parse` MCP tool** with `tla_file` set to the spec file path. Never run SANY via Bash, `java -cp`, or any command-line invocation — the MCP server handles the entire toolchain.
 
-SANY clean output looks like:
-
-```
-****** SANY2 Version 2.2
-Parsing file /path/to/Spec.tla
-...
-*** Errors: 0
-```
-
-- If `*** Errors: 0` — the spec is valid. Return the spec files to the pipeline.
-- If errors are reported — read the error messages, fix the `.tla` file, and re-run SANY. Repeat until the spec parses cleanly. Do this silently — do not surface parse errors to the user.
+- If `valid` is `true` — the spec is valid. Return the spec files to the pipeline.
+- If `valid` is `false` — read the error messages from the `errors` array (each has `message` and `location` with `file`, `line`, `col`). Fix the `.tla` file and re-run `tla_parse`. Repeat until the spec parses cleanly. Do this silently — do not surface parse errors to the user.
 
 ### What NOT to do
 
-- **Never run TLC** (`run_tlc`, `run-tlc.sh`, or any model-checking command). The specifier only validates syntax. The verifier agent is the sole agent that runs TLC.
+- **Never run TLC** (`tlc_check`, `tlc_simulate`, or any model-checking tool). The specifier only validates syntax. The verifier agent is the sole agent that runs TLC.
 - **Never attempt to verify invariants or find violations.** Your job ends when SANY reports zero errors.
 
 ## Fairness

@@ -752,13 +752,35 @@ function checkInvariants() {
   listEl.innerHTML = '';
 
   (GRAPH.invariants || []).forEach(function(name) {
-    // Check if current state is the violating state for this invariant/property
+    // Check if current state violates this invariant/property
     var violated = false;
     (GRAPH.violations || []).forEach(function(v) {
-      if ((v.invariant === name || v.property === name) &&
-          v.trace && v.trace.length > 0 &&
-          v.trace[v.trace.length - 1].stateId === currentStateId) {
-        violated = true;
+      if (!(v.invariant === name || v.property === name) || !v.trace || v.trace.length === 0) return;
+      if (v.type === 'temporal') {
+        // Liveness: violated across the entire loop portion of the trace.
+        // Find the "Back to state" entry — everything from that target onward is the loop.
+        var loopBackIdx = -1;
+        for (var ti = 0; ti < v.trace.length; ti++) {
+          if (v.trace[ti].action === 'Back to state') {
+            // Find the first trace entry with this stateId — that's the loop start
+            for (var li = 0; li < ti; li++) {
+              if (v.trace[li].stateId === v.trace[ti].stateId) { loopBackIdx = li; break; }
+            }
+            break;
+          }
+        }
+        if (loopBackIdx >= 0) {
+          // Red for any state in the loop
+          for (var si = loopBackIdx; si < v.trace.length; si++) {
+            if (v.trace[si].stateId === currentStateId) { violated = true; break; }
+          }
+        } else {
+          // No loop detected — fall back to last state
+          if (v.trace[v.trace.length - 1].stateId === currentStateId) violated = true;
+        }
+      } else {
+        // Safety: violated at the final state of the trace
+        if (v.trace[v.trace.length - 1].stateId === currentStateId) violated = true;
       }
     });
 

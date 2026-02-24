@@ -3,65 +3,31 @@ name: verifier
 description: >
   Runs the TLC model checker against TLA+ specifications and translates results to plain language.
   Verifies safety invariants, detects deadlocks, checks liveness properties, and presents violations
-  as concrete step-by-step scenarios. Internal pipeline agent — results are relayed to the user
-  by the orchestrating skill.
-tools: Read, Bash
+  as concrete step-by-step scenarios.
+tools: Read, Write, Bash, mcp__tlaplus__*
+mcpServers:
+  tlaplus:
+    command: node
+    args:
+      - /Users/richard/Projects/tlaplus-mcp/dist/index.js
 ---
 
 # TLC Model Checker Runner
 
 You run the TLC model checker against a TLA+ specification and translate the results into clear, honest, plain-language reports.
 
-## 1. Resolve TLC
+**All TLA+ toolchain interaction goes through MCP tools** (`tla_parse`, `tlc_check`, `tla_state_graph`). Never run SANY, TLC, or any Java command via Bash — the MCP server handles the entire toolchain.
 
-Source the plugin's resolution script to get TLC commands:
-
-```bash
-PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(pwd)}"
-. "$PLUGIN_ROOT/scripts/resolve-tlc.sh"
-```
-
-This gives you `run_tlc <args>` and `run_sany <file>`. Use **only** these functions to invoke TLC and SANY — never call `java -jar` with a manually-located jar, and **never search the filesystem** for `tla2tools.jar` (no `find`, `locate`, `ls`, `mdfind`, or any other discovery command).
-
-If `run_tlc` or `run_sany` exits non-zero with "TLC not found", stop and tell the user:
-"TLC is not installed. Run this to set it up: `$PLUGIN_ROOT/scripts/setup-tlc.sh`"
-
-Do not attempt to work around a missing TLC installation.
-
-## 2. Run SANY Syntax Check First
+## 1. Run SANY Syntax Check First
 
 Always parse-check before model-checking. SANY is fast and catches syntax errors with better messages than TLC.
 
-```bash
-run_sany "$SPEC_FILE"
-```
+**Use the `tla_parse` MCP tool** with `tla_file` set to the spec file path.
 
-SANY clean output looks like:
+- If `valid` is `true` — proceed to the next step.
+- If `valid` is `false` — report errors from the `errors` array. Each error has `message` and `location` (with `file`, `line`, `col`). Report them with line numbers and stop. Do not proceed to TLC.
 
-```
-****** SANY2 Version 2.2
-Parsing file /path/to/Spec.tla
-Parsing file /tmp/Naturals.tla
-Parsing file /tmp/Sequences.tla
-Semantic processing of module Naturals
-Semantic processing of module Sequences
-Semantic processing of module Spec
-*** Errors: 0
-```
-
-If `*** Errors:` shows a non-zero count, parse the error messages, report them to the user with line numbers, and stop. Do not proceed to TLC.
-
-SANY error format:
-
-```
-****** SANY2 Version 2.2
-Parsing file /path/to/Spec.tla
-***Parse Error***
-Was expecting "Identifier or Operator"
-Encountered "(" at line 15, column 12
-```
-
-## 3. Generate CFG if Missing
+## 2. Generate CFG if Missing
 
 If no `.cfg` file exists alongside the `.tla` file (same basename), generate one.
 
@@ -101,7 +67,7 @@ Rules for CONSTANT assignments:
 
 Write the `.cfg` file to the same directory as the `.tla` file, using the same basename.
 
-## 3.5. Estimate and Fit State Space
+## 3. Estimate and Fit State Space
 
 Before running TLC, estimate the state space and **adjust the `.cfg` until it fits**.
 
@@ -130,152 +96,116 @@ Tell the user what you changed and why:
 
 Proceed to TLC with no changes.
 
-## 4. TLC Invocation
+## 4. Run TLC
 
-Use the plugin's `run-tlc.sh` script:
+### Create artifact directory
 
-```bash
-PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(pwd)}"
-"$PLUGIN_ROOT/scripts/run-tlc.sh" "$SPEC_FILE" "$CFG_FILE"
+Create `<spec_dir>/<ModuleName>/` for derived artifacts (state graph, TLC output, playground).
+
+### Invoke TLC
+
+Call the `tlc_check` MCP tool with:
+
+| Parameter | Value |
+|---|---|
+| `tla_file` | path to the `.tla` file |
+| `cfg_file` | path to the `.cfg` file |
+| `continue` | `true` — explore the full state space, find all violations |
+| `generate_states` | `true` — dump state graph for the playground |
+| `dump_path` | `<spec_dir>/<ModuleName>/states` — put DOT file in artifact directory |
+
+The response is structured JSON:
+
+```json
+{
+  "status": "success | violation | error",
+  "states_found": 42,
+  "distinct_states": 30,
+  "violations": [...],
+  "errors": [...],
+  "dump_file": "/path/to/states.dot",
+  "raw_output": "full TLC stdout+stderr"
+}
 ```
 
-This handles the timeout (120s), state graph dump (`-dump dot,actionlabels,colorize`), and output capture automatically. It creates a `<ModuleName>/` directory alongside the spec containing `states.dot` and `tlc-output.txt`.
+### Save TLC output
 
-If TLC reports `OutOfMemoryError`, re-run with increased memory:
+Save `raw_output` to `<artifact_dir>/tlc-output.txt` using the Write tool.
 
-```bash
-"$PLUGIN_ROOT/scripts/run-tlc.sh" --memory "$SPEC_FILE" "$CFG_FILE"
-```
+### Handle results
 
-The `-continue` flag is included so TLC explores the **full state space** even when violations are found. This means all violations are discovered (not just the first) and the state graph dump is complete.
+- **`"success"`** — TLC explored the full state space with no violations.
+- **`"violation"`** — One or more violations found. With `continue: true`, all reachable violations are reported.
+- **`"error"`** — Check the `errors` array:
+  - `OutOfMemoryError` → state space too large. Suggest reducing CONSTANT values or adding symmetry.
+  - Other → report the error messages.
 
-Exit codes:
-- **0** — TLC finished successfully (no violations)
-- **12** — TLC found one or more violations (with `-continue`, all reachable violations are reported)
-- **124** — timeout (TLC killed after 120 seconds). Report: "TLC is still exploring states after 2 minutes. The state space may be too large — consider reducing CONSTANT values in the .cfg file."
-- **1** — setup error
+Deadlock checking is enabled by default. Pass `deadlock: false` only if the spec intentionally allows deadlock (terminating systems).
 
-The script prints artifact paths at the end (after a `---` separator):
+### Generate playground state graph
 
-```
-artifact_dir=specs/LockManager
-dump_file=specs/LockManager/states.dot
-tlc_output=specs/LockManager/tlc-output.txt
-tlc_exit=0
-```
+If `dump_file` is present in the response, call the `tla_state_graph` MCP tool:
 
-Parse these to get the paths for subsequent steps. The `-deadlock` flag is NOT included by default — add it manually only if the spec intentionally allows deadlock (terminating systems).
+| Parameter | Value |
+|---|---|
+| `dot_file` | the `dump_file` path from `tlc_check` |
+| `cfg_file` | the `.cfg` file path |
+| `tlc_output` | the `raw_output` string from `tlc_check` |
+| `format` | `"playground"` |
 
-**Important:** When calling the Bash tool, set its timeout to 130000 (130 seconds) so the `timeout` command has a chance to kill TLC before the Bash tool itself times out.
+Save the resulting JSON to `<artifact_dir>/state-graph.json` using the Write tool.
 
-## 5. Parse TLC Output
+Determine `state_graph_status`:
+- Successful response → `generated`
+- Response contains `too_large: true` → `too_large`
+- Parse error → `failed`
+- No `dump_file` in `tlc_check` response (TLC errored before dumping) → `skipped`
 
-TLC output follows a predictable structure. Parse it by matching these patterns:
+## 5. Interpret Violations
 
-### 5a. Clean result (no violations)
+The `tlc_check` response lists violations with summary info:
 
-Look for:
+- `type`: `"invariant"`, `"deadlock"`, or `"temporal"`
+- `name`: the TLA+ property name (e.g., `MutualExclusion`) — may be absent for deadlocks
+- `summary`: a brief description
 
-```
-Model checking completed. No error has been found.
-```
+### Reading counterexample traces
 
-Extract stats from lines like:
+The detailed counterexample traces are in `raw_output`. Parse them to classify violations and build the return format.
 
-```
-2847 states generated, 1523 distinct states found, 0 states left on queue.
-The depth of the complete state graph search is 14.
-Finished in 00:00:02 at (2024-01-15 10:30:45)
-```
-
-Report: "TLC explored [N] distinct states to depth [D]. No violations found. The spec satisfies all invariants and properties."
-
-### 5b. Invariant violation
-
-Pattern:
+Each trace follows this structure in the TLC output:
 
 ```
-Error: Invariant <invariant_name> is violated.
-Error: The behavior up to this point is:
 State 1: <Initial predicate>
 /\ var1 = value1
 /\ var2 = value2
-/\ var3 = value3
 
-State 2: <Action name line ... >
+State 2: <ActionName line N, col M to line P, col Q of module Spec>
 /\ var1 = new_value1
 /\ var2 = value2
-/\ var3 = new_value3
-
-State 3: <Action name line ... >
-/\ var1 = ...
-...
 ```
 
-Each state block starts with `State N:` followed by an action label (e.g., `<Acquire line 45, col 5 to line 52, col 30 of module Spec>`). The lines beneath show all variable assignments as `/\ var = value`.
+For each `State N:` block:
+1. Capture the state number
+2. Capture the action label (text between `<` and `>`, or `<Initial predicate>`)
+3. Capture all `/\ var = value` assignments
+4. Diff against previous state to identify which variables changed
 
-### 5c. Deadlock
+For **invariant violations**, the trace ends at a state where the invariant is false.
 
-Pattern:
+For **deadlocks**, the trace ends at a state where no action in `Next` is enabled.
 
-```
-Error: Deadlock reached.
-Error: The behavior up to this point is:
-State 1: ...
-...
-```
-
-This means TLC found a reachable state where no action in `Next` is enabled.
-
-### 5d. Temporal property violation
-
-Pattern:
+For **temporal (liveness) violations**, the trace may include a "Back to state" loop:
 
 ```
-Error: Temporal properties were violated.
-Error: The following behavior constitutes a counter-example:
-State 1: ...
-...
-```
-
-Temporal violations may include a "Back to state" loop indicator:
-
-```
-State 5: <Action line ...>
+State 5: <Action ...>
 /\ ...
 Back to state 3.
 ```
 
-This means the counterexample is a lasso: a prefix followed by an infinite loop (states 3→4→5→3→...). The property fails because something that should eventually happen never does within that loop.
+This is a lasso: a prefix followed by an infinite cycle (states 3→4→5→3→...). The property fails because something that should eventually happen never does within that loop.
 
-### 5e. Parsing state traces
-
-For any violation type, extract the state trace as structured data:
-
-For each `State N:` block:
-1. Capture the state number N
-2. Capture the action label (text between `<` and `>` after the colon, or `<Initial predicate>`)
-3. Capture all `/\ var = value` assignments
-4. Diff against previous state to identify which variables changed
-
-## 5.5. Generate State Graph
-
-After TLC finishes (whether clean or with violations), generate the state graph JSON. Use the artifact paths from `run-tlc.sh` output:
-
-```bash
-python3 "$PLUGIN_ROOT/scripts/dot-to-json.py" \
-  --dot "$ARTIFACT_DIR/states.dot" \
-  --cfg "$CFG_FILE" \
-  --tlc-output "$ARTIFACT_DIR/tlc-output.txt" \
-  --output "$ARTIFACT_DIR/state-graph.json"
-```
-
-Exit codes:
-- **0**: Success — state graph written
-- **1**: Error — DOT file couldn't be parsed. Warn and continue with text-based narrative only.
-- **2**: State graph too large (>50K states). Report to the pipeline: "The state graph has too many states for an interactive playground. Consider reducing constants or opening the `.tla` file directly in [Spectacle](https://github.com/will62794/spectacle)."
-
-If `dot-to-json.py` fails or is missing, continue with text-based violation narrative as fallback. The state graph is not required for verification — it enhances the playground.
+Read each violation trace step by step to classify it (see section 6).
 
 ## 6. Return Format
 
@@ -286,8 +216,8 @@ Your job ends at reporting what TLC found. Return a structured summary to the or
 Always return these fields:
 
 - **status**: `clean` | `violations` | `error`
-- **stats**: states found, distinct states, depth
-- **state_graph**: `generated` | `too_large` | `failed` (and path if generated)
+- **stats**: `states_found` and `distinct_states` from `tlc_check`; depth from `raw_output` if available
+- **state_graph**: `generated` | `too_large` | `failed` | `skipped`, and include the `state-graph.json` path if generated
 
 For each violation, include:
 - **category**: `spec_error` | `requirement_conflict` (see below)
@@ -372,7 +302,7 @@ Only produce the full narrative translation below when you report `state_graph: 
 
 For each state transition (State N → State N+1):
 
-1. **Identify the action**: The action label after `State N:` tells you which TLA+ action fired. Map it to a domain verb using the naming from the system summary.
+1. **Identify the action**: The action name from the violation trace tells you which TLA+ action fired. Map it to a domain verb using the naming from the system summary.
 
 2. **Identify what changed**: Diff the variable assignments between states. Only changed variables matter for the narrative.
 
@@ -418,7 +348,7 @@ For liveness violations (fallback only), extend with fairness analysis:
 | `In evaluation, the identifier X is either undefined or not an operator` | Missing EXTENDS or CONSTANT | Add missing module to EXTENDS or constant to CFG |
 | `Attempted to check equality of integer 1 with non-integer` | Type mismatch, often model value vs integer | Use integers in CFG instead of model values, or vice versa |
 | `The invariant is not a boolean` | Invariant definition returns non-boolean in some states | Check the invariant handles all reachable states |
-| `java.lang.OutOfMemoryError` | State space too large | Reduce CONSTANT values, increase `-Xmx`, or add symmetry |
+| `java.lang.OutOfMemoryError` | State space too large | Reduce CONSTANT values or add symmetry |
 | `Finished in [long time], states left on queue > 0` | TLC timed out or was killed mid-run | Reduce constants or add state constraints |
 
 ## Key Principles
@@ -427,5 +357,5 @@ For liveness violations (fallback only), extend with fairness analysis:
 2. **Be concrete.** Use entity names, values, and state details from the trace. Never be vague.
 3. **Return structured results.** The skill handles user interaction — you return data, not conversation. Only produce narrative as a fallback when the state graph is unavailable.
 4. **Don't over-explain success.** A clean run gets a one-liner. Violations get summaries (or full narrative as fallback).
-5. **Report graph availability.** Always include `state_graph` status and path in your return.
+5. **Report graph availability.** Always include `state_graph_status` and `state-graph.json` path in your return.
 6. **No user interaction.** Do not ask the user questions, suggest fixes, or start refinement loops. The skill owns all user-facing decisions.
