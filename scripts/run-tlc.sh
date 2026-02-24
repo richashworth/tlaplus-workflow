@@ -19,6 +19,17 @@ set -euo pipefail
 PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
 . "$PLUGIN_ROOT/scripts/resolve-tlc.sh"
 
+# Resolve timeout command (GNU coreutils: timeout on Linux, gtimeout on macOS)
+if command -v timeout &>/dev/null; then
+  TIMEOUT_CMD=timeout
+elif command -v gtimeout &>/dev/null; then
+  TIMEOUT_CMD=gtimeout
+else
+  echo "Error: 'timeout' (GNU coreutils) is required but not found." >&2
+  echo "On macOS: brew install coreutils" >&2
+  exit 1
+fi
+
 # Parse arguments
 MEMORY=false
 while [[ "${1:-}" == --* ]]; do
@@ -61,15 +72,15 @@ if [ "$MEMORY" = true ]; then
     echo "Run: $PLUGIN_ROOT/scripts/setup-tlc.sh" >&2
     exit 1
   fi
-  timeout 120 bash -c '
-    java -Xmx4g -jar "$1" -modelcheck -workers auto \
+  $TIMEOUT_CMD 120 bash -c '
+    java -Xmx4g -jar "$1" -modelcheck -continue -workers auto \
       -dump dot,actionlabels,colorize "$4" -config "$2" "$3" 2>&1 | tee "$5"
   ' _ "$_TLA2TOOLS" "$CFG_FILE" "$SPEC_FILE" "$DUMP_FILE" "$TLC_OUTPUT_FILE"
 else
-  timeout 120 bash -c '
+  $TIMEOUT_CMD 120 bash -c '
     export CLAUDE_PLUGIN_ROOT="$1"
     . "$1/scripts/resolve-tlc.sh"
-    run_tlc -modelcheck -workers auto \
+    run_tlc -modelcheck -continue -workers auto \
       -dump dot,actionlabels,colorize "$4" -config "$2" "$3" 2>&1 | tee "$5"
   ' _ "$PLUGIN_ROOT" "$CFG_FILE" "$SPEC_FILE" "$DUMP_FILE" "$TLC_OUTPUT_FILE"
 fi

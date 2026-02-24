@@ -185,7 +185,7 @@ Present the summary to the user and ask them to confirm or correct it. Once conf
 
 ## Pipeline
 
-### Step 0: Validate Summary
+### Step 1: Validate Summary
 
 Before invoking any agent, check that the structured summary contains all 9 required sections with non-empty content:
 
@@ -201,54 +201,90 @@ Before invoking any agent, check that the structured summary contains all 9 requ
 
 If any section is missing or empty, stop and ask the user to fill the gap before proceeding. List exactly which sections need content.
 
-### Step 1: Specify
+### Step 2: Choose Spec Directory
 
-Invoke the **specifier** agent. Pass it the confirmed system summary. It writes `.tlaplus/<ModuleName>.tla` and `.tlaplus/<ModuleName>.cfg`.
+Before generating any files, determine where to put them.
 
-### Step 1.5: Present and offer next steps
+**If the project already has a directory containing `.tla` files**, use that directory and skip the prompt.
+
+**Otherwise**, use AskUserQuestion:
+
+> "Where should I store the TLA+ spec files?"
+
+Options:
+1. **`specs/`** — visible project directory (Recommended)
+2. **`.tlaplus/`** — hidden directory
+3. Other — custom path
+
+Store the chosen path as the **spec directory**. Pass it to all agents so they write files there.
+
+### Step 3: Specify
+
+Invoke the **specifier** agent. Pass it the confirmed system summary and the **spec directory**. It writes `<spec_dir>/<ModuleName>.tla` and `<spec_dir>/<ModuleName>.cfg`.
+
+### Step 4: Present and offer next steps
 
 Tell the user what was created (file paths) and give a one-line summary of the module scope (e.g., "3 entities, 5 actions, 2 safety invariants, 1 liveness property"). Then ask what they'd like to do next:
 
 - **Walk me through the spec** — summarize the spec in plain language: what the entities are, what transitions exist, what properties are checked, and why. No TLA+ syntax — just the domain story.
-- **Explore it** — run TLC model checking and build an interactive playground to explore the design (Step 2).
+- **Explore it** — run TLC model checking and build an interactive playground to explore the design (Step 5).
 
 Wait for the user's choice before proceeding.
 
-### Step 2: Verify and Explore
+### Step 5: Verify and Explore
 
-This step runs TLC, generates the state graph, and builds the interactive playground.
+This step runs TLC, generates the state graph, builds the interactive playground, and presents results. Follow this exact sequence — steps cannot be reordered.
 
-1. **Invoke the verifier agent.** It runs TLC with `-dump dot,actionlabels,colorize` to dump the full state graph alongside checking invariants. It also runs `dot-to-json.py` to produce `.tlaplus/<ModuleName>/state-graph.json`.
+**Step 5.1: Invoke the verifier agent.** Pass it the spec files **and** the confirmed structured summary (so it can classify violations as spec errors vs requirement conflicts). It returns structured results:
+- `status`: clean | violations | error
+- `violation_count` and violation summaries (one line each), each categorized as `spec_error` or `requirement_conflict`
+- `state_graph`: generated | too_large | failed
+- `stats`: states found, distinct states, depth
 
-2. **Handle SANY errors** (syntax errors, not design violations): Don't surface to the user. Route to the specifier agent to fix. Re-verify. Only escalate after 2 failed attempts.
+**Step 5.2: Handle verifier results by category.** The verifier classifies each violation as either a `spec_error` or a `requirement_conflict`:
 
-3. **If state graph is too large** (verifier reports exit code 2 from dot-to-json.py): Tell the user the state space is too large for an interactive playground. Suggest reducing constants or opening the `.tla` file in [Spectacle](https://github.com/will62794/spectacle). Continue with text-based verification output only.
+**Spec coding errors** (`spec_error`) — the TLA+ code doesn't correctly encode the user's requirements. These are bugs in the spec, not in the design. Route back to the specifier agent with the violation trace and ask it to fix the encoding. Re-verify after the fix. Escalate to the user only after 2 failed fix attempts ("I've tried to fix this twice but the issue persists — here's what's going wrong: [details]").
 
-4. **Invoke the animator agent** to build the playground from the state graph JSON. It reads `state-graph.json` and the system summary, generates `renderState`, `DOMAIN_STYLES`, and `ACTION_LABELS`, and writes `.tlaplus/<ModuleName>/playground.html`. Open it automatically.
+**Requirement conflicts** (`requirement_conflict`) — two or more stated requirements are mutually unsatisfiable. These are design decisions that only the user can resolve. For each conflict, present:
+- The rule that was broken
+- The step-by-step trace showing how the system reaches the bad state
+- Which requirements are in tension
+- A list of possible resolutions (do not pick one)
 
-5. **If violations were found**, present them in plain text — list each violation with its ID, the broken rule, and a one-sentence summary of the scenario:
+Use AskUserQuestion to let the user choose a resolution. Once they decide, update the structured summary to reflect the resolution, route to the specifier to update the spec, and re-verify from Step 5.1.
 
-   > TLC found {N} scenarios where your design rules are broken:
-   >
-   > - **v1: {invariant_name}** — {summary}
-   > - **v2: {invariant_name}** — {summary}
-   > - ...
-   >
-   > These are pinned as scenarios in the playground so you can step through them visually.
+**SANY errors** (syntax/parse errors, not violations): Don't surface to the user. Route to the specifier agent to fix silently. Re-verify. Escalate after 2 failed attempts.
 
-   Then use AskUserQuestion:
-   > "What would you like to do?"
+**Step 5.3: Handle state graph too large.** If the verifier reports `state_graph: too_large`, tell the user the state space is too large for an interactive playground. Suggest reducing constants or opening the `.tla` file in [Spectacle](https://github.com/will62794/spectacle). Skip to Step 5.5 (text-only violation presentation).
 
-   Options:
-   - "Fix the design" — discuss which violations to fix, then update the spec to add guards or constraints that prevent them
-   - "Explore in the playground" — re-open the playground and guide the user to the Scenarios panel (e.g., "Select a scenario from the dropdown, then use **Next Step** or **Play All** to walk through it"). After the user has explored, re-ask this same question.
-   - "Continue anyway" — the user considers the violations acceptable. Note which violations are being accepted, then proceed to Step 3 normally.
+**Step 5.4: Invoke the animator agent — ALWAYS**, whether violations exist or not. Violations are pinned as scenarios in the playground. Open the playground automatically. Only skip this step if Step 5.3 applied.
 
-   **If the user chooses "Fix the design":** Discuss the violations conversationally. The user may want to fix some and accept others — let them explain in their own words. For each violation they want fixed, understand whether to add a guard/constraint or relax the invariant. Then: commit current spec for rollback (`git add .tlaplus/<ModuleName>.tla .tlaplus/<ModuleName>.cfg && git commit -m "tlaplus: pre-refinement"`), update the spec, re-run TLC + state graph + playground. Repeat until the user is satisfied.
+**Step 5.5: Present results and get user input.**
 
-6. **If clean** (no violations): The playground opens in exploration mode. Proceed to Step 3.
+By this point, all `spec_error` violations have been resolved in Step 5.2. Only `requirement_conflict` violations (if any) remain.
 
-### Step 3: Offer extras
+**If requirement conflicts found** — list each with its ID, the broken rule, and a one-sentence summary:
+
+> TLC found {N} scenarios where your design rules are broken:
+>
+> - **v1: {invariant_name}** — {summary}
+> - **v2: {invariant_name}** — {summary}
+>
+> These are pinned as scenarios in the playground so you can step through them visually.
+
+Then use AskUserQuestion:
+> "What would you like to do?"
+
+Options:
+- "Fix the design" — discuss which violations to fix, then update the spec to add guards or constraints that prevent them
+- "Explore in the playground" — re-open the playground and guide the user to the Scenarios panel (e.g., "Select a scenario from the dropdown, then use **Next Step** or **Play All** to walk through it"). After the user has explored, re-ask this same question.
+- "Continue anyway" — the user considers the violations acceptable. Note which violations are being accepted, then proceed to Step 6 normally.
+
+**If the user chooses "Fix the design":** Discuss the violations conversationally. The user may want to fix some and accept others — let them explain in their own words. For each violation they want fixed, understand whether to add a guard/constraint or relax the invariant. Then: commit current spec for rollback (`git add <spec_dir>/<ModuleName>.tla <spec_dir>/<ModuleName>.cfg && git commit -m "tlaplus: pre-refinement"`), update the spec, re-run from Step 5.1. Repeat until the user is satisfied.
+
+**If clean** (no violations): one-line summary of stats, proceed to Step 6.
+
+### Step 6: Offer extras
 
 After the playground is open, what you offer depends on whether implementation code exists:
 
@@ -271,7 +307,8 @@ After the playground is open, what you offer depends on whether implementation c
 
 ## Rules
 
-- **Stop after spec creation.** Always pause at Step 1.5 to let the user choose their next step. Don't auto-advance.
+- **Use AskUserQuestion for all decision points.** Never present choices as plain text. Every point where the user must choose between options uses AskUserQuestion.
+- **Stop after spec creation.** Always pause at Step 4 to let the user choose their next step. Don't auto-advance.
 - **Don't stop between verify and animate.** Once verification finishes and the state graph is built, proceed directly to building the playground.
 - **Do stop for violations.** When TLC finds bugs, present via AskUserQuestion and get user input before fixing.
 - **Do stop for extras.** Tests and code changes are opt-in.

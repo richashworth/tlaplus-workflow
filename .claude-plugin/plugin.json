@@ -2,6 +2,6 @@
   "name": "tlaplus-workflow",
   "description": "Hide TLA+ formal verification behind a conversational interface. Five specialist agents interview, specify, verify, animate, and test stateful system designs without exposing formal notation.",
   "author": {
-    "name": "Richard"
+    "name": "Richard Ashworth"
   }
 }

@@ -193,6 +193,18 @@ body {
   transition-duration: 40ms;
 }
 
+.action-group-label {
+  width: 100%;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-3);
+  margin-top: 8px;
+}
+
+.action-group-label:first-child { margin-top: 0; }
+
 .actions-empty {
   color: var(--text-3);
   font-size: 13px;
@@ -240,7 +252,35 @@ body {
   font-weight: 500;
   transition: all 250ms ease;
   border-left: 3px solid transparent;
+  position: relative;
 }
+
+.invariant-help {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px; height: 14px;
+  font-size: 10px; font-weight: 700;
+  border-radius: 50%;
+  border: 1px solid var(--border-mid);
+  color: var(--text-3);
+  margin-left: 4px; flex-shrink: 0;
+  cursor: help;
+}
+
+.invariant-tooltip {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 6px); left: 10px;
+  background: var(--text-1); color: var(--bg);
+  font-size: 11px; font-weight: 400;
+  padding: 4px 10px; border-radius: 4px;
+  white-space: normal; max-width: 240px;
+  z-index: 10; pointer-events: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.invariant-badge:hover .invariant-tooltip { display: block; }
 
 .invariant-badge.pass {
   background: var(--green-bg);
@@ -291,7 +331,7 @@ body {
 
 .trace-entry {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   padding: 2px 6px;
   border-radius: var(--radius-sm);
   transition: background var(--fast);
@@ -307,8 +347,19 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+.trace-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  background: var(--accent);
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 7px;
+}
+
 .trace-action {
-  color: var(--text-2);
+  color: var(--text-1);
+  font-family: var(--font);
   font-weight: 500;
 }
 
@@ -332,6 +383,31 @@ body {
   cursor: pointer;
   margin-bottom: 8px;
 }
+
+.scenario-description {
+  display: none;
+  font-size: 12px; line-height: 1.5;
+  color: var(--text-2); margin-bottom: 8px;
+  background: var(--surface-hover);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.scenario-description.visible { display: block; }
+
+.scenario-desc-row {
+  padding: 6px 10px; display: flex; gap: 6px;
+}
+.scenario-desc-row + .scenario-desc-row {
+  border-top: 1px solid var(--border);
+}
+.scenario-desc-label {
+  flex-shrink: 0; font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--text-3); min-width: 52px; padding-top: 1px;
+}
+.scenario-desc-value { color: var(--text-1); }
+.scenario-desc-value.rule-broken { color: var(--red); font-weight: 600; }
 
 .scenario-controls {
   display: flex;
@@ -394,6 +470,46 @@ body {
   background: var(--surface-hover);
 }
 
+/* ===== Theme Toggle ===== */
+.theme-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+}
+
+.toggle-track {
+  display: block;
+  width: 40px;
+  height: 22px;
+  background: var(--border-bright);
+  border-radius: 100px;
+  position: relative;
+  transition: background var(--med);
+}
+
+:root.dark .toggle-track {
+  background: var(--accent);
+}
+
+.toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  background: var(--surface);
+  border-radius: 50%;
+  transition: transform var(--med);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
+
+:root.dark .toggle-thumb {
+  transform: translateX(18px);
+}
+
 /* ===== Toast ===== */
 .toast {
   position: fixed;
@@ -440,7 +556,11 @@ body {
       <h1 id="page-title">System Playground</h1>
       <div style="display:flex;align-items:center;gap:8px;">
         <span class="step-counter" id="step-counter">Step 0</span>
-        <button id="theme-toggle" class="step-counter" style="cursor:pointer;border:1px solid var(--border-mid);" onclick="toggleTheme()" title="Toggle dark/light theme">☀️</button>
+        <button id="theme-toggle" class="theme-toggle" onclick="toggleTheme()" title="Toggle dark/light theme" aria-label="Toggle theme">
+          <span class="toggle-track">
+            <span class="toggle-thumb"></span>
+          </span>
+        </button>
       </div>
     </div>
 
@@ -480,6 +600,7 @@ body {
       <select class="scenario-select" id="scenario-select">
         <option value="">Choose a scenario...</option>
       </select>
+      <div class="scenario-description" id="scenario-description"></div>
       <div class="scenario-controls">
         <button class="scenario-btn" id="scenario-reset" disabled>Reset</button>
         <button class="scenario-btn primary" id="scenario-step" disabled>Next Step</button>
@@ -510,6 +631,18 @@ const GRAPH = {"initialStateId":null,"states":{},"transitions":{},"invariants":[
 const ACTION_LABELS = {};
 // === END GENERATED ===
 
+// === GENERATED: INVARIANT_LABELS ===
+const INVARIANT_LABELS = {};
+// === END GENERATED ===
+
+// === GENERATED: SCENARIO_LABELS ===
+const SCENARIO_LABELS = {};
+// === END GENERATED ===
+
+// === GENERATED: HAPPY_PATHS ===
+const HAPPY_PATHS = [];
+// === END GENERATED ===
+
 // === GENERATED: renderState ===
 function renderState(vars) {
   return '<p style="color:var(--text-3);padding:40px;text-align:center;">No prototype renderer loaded.</p>';
@@ -534,6 +667,7 @@ function getAvailableActions() {
   return (GRAPH.transitions[currentStateId] || []).map(function(edge, i) {
     return {
       index: i,
+      action: edge.action,
       label: ACTION_LABELS[edge.label] || edge.label,
       technicalLabel: edge.label,
       target: edge.target
@@ -569,12 +703,31 @@ function renderActions() {
     return;
   }
 
+  // Group by action type
+  var groups = {};
+  var groupOrder = [];
   actions.forEach(function(a) {
-    var btn = document.createElement('button');
-    btn.className = 'action-btn';
-    btn.textContent = a.label;
-    btn.onclick = function() { dispatch(a.index); };
-    grid.appendChild(btn);
+    var key = a.action || '';
+    if (!groups[key]) { groups[key] = []; groupOrder.push(key); }
+    groups[key].push(a);
+  });
+
+  var showHeadings = groupOrder.length >= 2;
+
+  groupOrder.forEach(function(key) {
+    if (showHeadings && key) {
+      var lbl = document.createElement('div');
+      lbl.className = 'action-group-label';
+      lbl.textContent = key;
+      grid.appendChild(lbl);
+    }
+    groups[key].forEach(function(a) {
+      var btn = document.createElement('button');
+      btn.className = 'action-btn';
+      btn.textContent = a.label;
+      btn.onclick = function() { dispatch(a.index); };
+      grid.appendChild(btn);
+    });
   });
 }
 
@@ -587,6 +740,7 @@ function renderTrace() {
   el.innerHTML = traceLog.map(function(entry) {
     return '<div class="trace-entry">' +
       '<span class="trace-step">' + entry.step + '.</span>' +
+      '<span class="trace-dot"></span>' +
       '<span class="trace-action">' + escapeHtml(entry.action) + '</span>' +
       '</div>';
   }).join('');
@@ -610,9 +764,15 @@ function checkInvariants() {
 
     var badge = document.createElement('div');
     badge.className = 'invariant-badge ' + (violated ? 'fail' : 'pass');
+    var displayName = name;
+    var tooltip = INVARIANT_LABELS[name];
     badge.innerHTML =
       '<span class="invariant-icon">' + (violated ? '&#10007;' : '&#10003;') + '</span>' +
-      '<span>' + escapeHtml(name) + '</span>';
+      '<span>' + escapeHtml(displayName) + '</span>' +
+      (tooltip
+        ? '<span class="invariant-help">?</span>' +
+          '<span class="invariant-tooltip">' + escapeHtml(tooltip) + '</span>'
+        : '');
     listEl.appendChild(badge);
   });
 
@@ -632,7 +792,7 @@ function checkInvariants() {
 
 function renderAll() {
   var state = getState();
-  document.getElementById('prototype').innerHTML = state ? renderState(state.vars) : '';
+  document.getElementById('prototype').innerHTML = state ? renderState(state.vars) : '<p style="color:var(--text-3);text-align:center;padding:40px;">State not found in graph.</p>';
   document.getElementById('step-counter').textContent = 'Step ' + traceLog.length;
   renderActions();
   renderTrace();
@@ -651,18 +811,40 @@ function resetPlayground() {
 }
 
 // =====================================================================
-// Scenarios (auto-populated from violation traces)
+// Scenarios (auto-populated from happy paths + violation traces)
 // =====================================================================
 
 function initScenarios() {
   var scenarios = [];
 
+  // Build scenarios from happy paths
+  (HAPPY_PATHS || []).forEach(function(hp) {
+    if (!hp.trace || hp.trace.length === 0) return;
+    scenarios.push({
+      name: hp.title ? ('\u2705 ' + hp.title) : 'Happy path',
+      description: hp.description || '',
+      rule: null,
+      type: 'happy',
+      traceLen: hp.trace.length,
+      trace: hp.trace
+    });
+  });
+
   // Build scenarios from violation traces
+  var bugNum = 0;
   (GRAPH.violations || []).forEach(function(v) {
     if (!v.trace || v.trace.length === 0) return;
-    var name = v.id + ': ' + (v.invariant || v.property || v.type) + ' — ' + v.summary;
+    bugNum++;
+    var sl = SCENARIO_LABELS[v.id];
+    var label = sl && sl.title
+      ? '\u274C Bug ' + bugNum + ': ' + sl.title
+      : v.id + ': ' + (v.invariant || v.property || v.type);
     scenarios.push({
-      name: name,
+      name: label,
+      description: sl && sl.description ? sl.description : (v.summary || ''),
+      rule: sl && sl.rule != null ? sl.rule : (v.invariant || v.property || null),
+      type: v.type,
+      traceLen: v.trace.length,
       trace: v.trace
     });
   });
@@ -682,17 +864,39 @@ function initScenarios() {
   // Store for use by controls
   window._scenarios = scenarios;
 
+  var descEl = document.getElementById('scenario-description');
   select.addEventListener('change', function() {
     var val = select.value;
     if (val === '') {
       activeScenario = null;
       scenarioIndex = -1;
+      descEl.classList.remove('visible');
+      descEl.innerHTML = '';
     } else {
-      activeScenario = scenarios[parseInt(val)];
+      var s = scenarios[parseInt(val)];
+      activeScenario = s;
       scenarioIndex = -1;
       resetPlayground();
-      activeScenario = scenarios[parseInt(val)];
+      activeScenario = s;
       select.value = val;
+      var isHappy = s.type === 'happy';
+      var descHtml = '';
+      if (s.rule && s.type !== 'deadlock') {
+        var ruleLabel = INVARIANT_LABELS[s.rule] || s.rule;
+        descHtml += '<div class="scenario-desc-row">' +
+          '<span class="scenario-desc-label">Rule</span>' +
+          '<span class="scenario-desc-value rule-broken">' + escapeHtml(ruleLabel) + '</span></div>';
+      }
+      if (s.description) {
+        descHtml += '<div class="scenario-desc-row">' +
+          '<span class="scenario-desc-label">' + (isHappy ? 'Outcome' : 'Bug') + '</span>' +
+          '<span class="scenario-desc-value">' + escapeHtml(s.description) + '</span></div>';
+      }
+      descHtml += '<div class="scenario-desc-row">' +
+        '<span class="scenario-desc-label">Steps</span>' +
+        '<span class="scenario-desc-value">' + s.traceLen + (isHappy ? ' steps' : ' steps to failure') + '</span></div>';
+      descEl.innerHTML = descHtml;
+      descEl.classList.add('visible');
     }
     updateScenarioControls();
   });
@@ -791,16 +995,12 @@ function showToast(msg) {
 function toggleTheme() {
   var isDark = document.documentElement.classList.toggle('dark');
   localStorage.setItem('theme', isDark ? 'dark' : 'light');
-  document.getElementById('theme-toggle').textContent = isDark ? '☀️' : '🌙';
 }
 
 (function initTheme() {
   var saved = localStorage.getItem('theme');
   if (saved === 'dark') {
     document.documentElement.classList.add('dark');
-    document.getElementById('theme-toggle').textContent = '☀️';
-  } else {
-    document.getElementById('theme-toggle').textContent = '🌙';
   }
 })();
 

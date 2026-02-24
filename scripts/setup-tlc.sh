@@ -10,6 +10,11 @@ if [ -f "$JAR" ]; then
   exit 0
 fi
 
+if ! command -v curl &>/dev/null; then
+  echo "Error: curl is required to download tla2tools.jar but not found." >&2
+  exit 1
+fi
+
 mkdir -p "$LIB_DIR"
 
 echo "Downloading tla2tools.jar..."
