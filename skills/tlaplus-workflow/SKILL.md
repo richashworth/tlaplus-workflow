@@ -96,12 +96,23 @@ Ask:
 - "Are there states that two entities should never be in at the same time?"
 - "What must ALWAYS be true, no matter what sequence of actions happens?"
 - "What must EVENTUALLY happen? (e.g., every hold must eventually be confirmed or expire)"
-- For each "must eventually" answer, follow up: "Is [that thing] guaranteed to happen as long as it's ever possible, or only if it's continuously possible without interruption?" (This distinguishes strong vs weak fairness — but don't use those terms with the user.)
 - "Is there a limit on [resource]? What happens when the limit is hit?"
 
 Capture: every "should never" statement, every "must always" statement, every "must eventually" statement, every resource bound.
 
-**Gate:** Present the rules in three groups (never / always / eventually). Use AskUserQuestion:
+**Pressure-test:** Before presenting, check each constraint against the domain model captured in earlier phases. For each constraint, ask yourself:
+
+- **Does it conflict with known transitions or failure modes?** A "must eventually" property that relies on an external system may not hold during outages. A "must never" property may conflict with a recovery path identified earlier.
+- **Is the user stating a hard guarantee or an aspiration?** "Every order must eventually ship" sounds like liveness, but is it still required if the order is cancelled? If the constraint has implicit exceptions, surface them.
+- **What would enforcing this actually require?** If a "must eventually" property requires the system to make progress even when competing actions keep preempting it, that has real design consequences — flag that.
+
+For any constraint where the implications aren't obvious, explain what it would mean in practice before asking the user to confirm. For example:
+
+> "You said every hold must eventually be confirmed or expire. That means your system must guarantee no hold stays in limbo forever — even during an outage of the confirmation service. Is that what you mean, or is it acceptable for holds to stay pending during downtime?"
+
+This replaces the generic fairness follow-up. Instead of asking an abstract question about "continuously possible vs repeatedly possible", ground it: "What could prevent [the thing] from happening? When that happens, must the system still guarantee it eventually, or is it okay to wait?"
+
+**Gate:** Present the rules in three groups (never / always / eventually), with any implications or caveats you surfaced during pressure-testing noted inline. Use AskUserQuestion:
 > "**Constraints** — here are the rules I've captured: [list by group]. Is this complete?"
 
 Options:
