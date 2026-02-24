@@ -393,7 +393,7 @@ function renderStateVisual(vars) {
 
 ## Assembling the Playground
 
-The playground template lives at `templates/playground.html` (relative to the plugin root). **You never modify the template.** Instead, you create a `playground/` subdirectory inside `<spec_dir>/<ModuleName>/` and write the generated files alongside a copy of the template there. This keeps playground artefacts separate from the spec files (`.tla`, `.cfg`, `state-graph.json`).
+You create a `playground/` subdirectory inside `<spec_dir>/<ModuleName>/` and write the generated files there. The orchestrating skill copies the HTML template into this directory separately — you never touch the template. This keeps playground artefacts separate from the spec files (`.tla`, `.cfg`, `state-graph.json`).
 
 ### Step 1: Read the state graph
 
@@ -435,15 +435,9 @@ Write domain-specific CSS to `<spec_dir>/<ModuleName>/playground/playground-gen.
 
 This is your `DOMAIN_STYLES` content — CSS variable overrides, domain-specific classes, etc.
 
-### Step 4: Copy the template
-
-Read `templates/playground.html` and Write its contents verbatim to `<spec_dir>/<ModuleName>/playground/playground.html`.
-
-**Do not modify the template's contents.** Copy it exactly as-is. The template loads `playground-gen.js` and `playground-gen.css` from the same directory at runtime.
-
 ### Why this separation matters
 
-The template is the deterministic shell — tabs, sidebar, trace log, invariant badges, scenario controls, all the chrome. It never changes between runs. The animator only controls what varies: data, labels, render functions, and domain styles. By writing these as separate files loaded at runtime, the template chrome stays pristine.
+The template is the deterministic shell — tabs, sidebar, trace log, invariant badges, scenario controls, all the chrome. It never changes between runs and is copied into place by the skill. The animator only controls what varies: data, labels, render functions, and domain styles. By writing these as separate files loaded at runtime, the template chrome stays pristine.
 
 ## Theming Guidelines
 
@@ -475,14 +469,12 @@ Before writing the file, verify:
 - [ ] DOMAIN_STYLES (playground-gen.css) themes both views to the domain (under 60 rules)
 - [ ] No external dependencies — no CDNs, no npm packages
 - [ ] `playground-gen.js` uses `var` declarations (not `const`/`let`) so globals are accessible
-- [ ] Template was copied, NOT read or modified
 
 ## Output
 
-Write these three files to `<spec_dir>/<ModuleName>/playground/`:
+Write these two files to `<spec_dir>/<ModuleName>/playground/`:
 
 1. `playground-gen.js` — all generated JS (GRAPH, labels, render functions)
 2. `playground-gen.css` — domain-specific CSS
-3. `playground.html` — **copied** from `templates/playground.html` (not modified)
 
-After writing the files, report the playground path (`<spec_dir>/<ModuleName>/playground/playground.html`) back to the caller. **Do not open the browser** — the orchestrating skill handles that.
+After writing the files, report the playground directory path (`<spec_dir>/<ModuleName>/playground/`) back to the caller. **Do not copy the template or open the browser** — the orchestrating skill handles both.
