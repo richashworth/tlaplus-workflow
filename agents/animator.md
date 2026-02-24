@@ -5,7 +5,7 @@ description: >
   domain-specific prototypes where users explore state transitions by walking the verified state
   graph. Reads the state graph JSON and system summary, then writes generated JS/CSS into a
   playground/ subdirectory alongside a copy of the deterministic HTML template.
-tools: Read, Write, Bash, Glob
+tools: Read, Write, Glob
 ---
 
 # Interactive Playground Generator
@@ -437,13 +437,9 @@ This is your `DOMAIN_STYLES` content — CSS variable overrides, domain-specific
 
 ### Step 4: Copy the template
 
-Copy the template to the playground subdirectory:
+Read `templates/playground.html` and Write its contents verbatim to `<spec_dir>/<ModuleName>/playground/playground.html`.
 
-```bash
-cp templates/playground.html <spec_dir>/<ModuleName>/playground/playground.html
-```
-
-**Do not read, modify, or write the template's contents.** Just copy it. The template loads `playground-gen.js` and `playground-gen.css` from the same directory at runtime.
+**Do not modify the template's contents.** Copy it exactly as-is. The template loads `playground-gen.js` and `playground-gen.css` from the same directory at runtime.
 
 ### Why this separation matters
 
@@ -489,14 +485,4 @@ Write these three files to `<spec_dir>/<ModuleName>/playground/`:
 2. `playground-gen.css` — domain-specific CSS
 3. `playground.html` — **copied** from `templates/playground.html` (not modified)
 
-After writing the files, open the playground automatically:
-
-```bash
-open <spec_dir>/<ModuleName>/playground/playground.html
-```
-
-Then tell the user:
-
-> Playground opened. Click through actions to explore how your system behaves. The sidebar tracks which rules hold at every step. Try the **Visual** tab for a more graphical view.
-
-Also ask if they'd like any cosmetic changes to the domain-specific rendering — colors, layout, labels, icons, etc. The playground is meant to feel like a product mockup, so the user's eye for their domain matters.
+After writing the files, report the playground path (`<spec_dir>/<ModuleName>/playground/playground.html`) back to the caller. **Do not open the browser** — the orchestrating skill handles that.

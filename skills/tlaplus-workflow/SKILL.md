@@ -324,7 +324,11 @@ Use AskUserQuestion to let the user choose a resolution. Once they decide, updat
 - `partial` → additionally note to the user: "The state space is large (substitute actual values from the verifier's `stats` field: `{stats.states_found}` states found, `{stats.distinct_states}` distinct), so the playground shows violation scenarios and key paths rather than the full graph. You can explore the full state space in [Spectacle](https://github.com/will62794/spectacle)."
 - `failed` or `skipped` → no playground. Present violations as text in Step 5.5. Suggest opening the `.tla` file in [Spectacle](https://github.com/will62794/spectacle).
 
-**Step 5.4: Invoke the animator agent** when the state graph is available (`generated` or `partial`). Violations are pinned as scenarios in the playground. Open the playground automatically.
+**Step 5.4: Invoke the animator agent** when the state graph is available (`generated` or `partial`). Violations are pinned as scenarios in the playground. After the animator finishes, open the playground in the browser:
+
+```bash
+open <spec_dir>/<ModuleName>/playground/playground.html
+```
 
 **Step 5.5: Present results and get user input.**
 
