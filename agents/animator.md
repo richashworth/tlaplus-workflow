@@ -62,11 +62,201 @@ If an edge label is already human-readable, keep it as-is. The template falls ba
 
 ### 2. `renderState(vars)`
 
-A function receiving the state's `vars` object (from `state.vars` in the graph) and returning an HTML string. **Theme this to the domain** — the prototype should look like a product mockup, not a state machine debugger.
+A function receiving the state's `vars` object (from `state.vars` in the graph) and returning an HTML string. The goal: someone unfamiliar with TLA+ should look at the prototype and immediately understand the system's current state in domain terms.
 
 The state graph is **complete** — `vars` always contains every variable. Never add defensive fallbacks like "State data not available" messages.
 
-The `vars` object has the same shape as the JSON in `states[id].vars`. Use domain-meaningful variable names and visual affordances (colors, icons via Unicode, spatial layout).
+The `vars` object has the same shape as the JSON in `states[id].vars`.
+
+#### Domain visualization principles
+
+1. **Show the actual domain objects, not variable dumps.** If the spec models a payment flow, show an order card with line items and a status badge — not `{status: "pending", amount: 42}` as text.
+
+2. **Use spatial layout to encode relationships.** Actors on the left, shared resources on the right. Queues rendered as ordered lists. Maps rendered as tables. Parent-child shown via nesting.
+
+3. **Use color semantically, not decoratively.** Green = healthy/complete. Red = error/violation. Amber = waiting/blocked. Accent = the "active" thing. Grey = idle/unused. Apply these via CSS variables so dark mode works.
+
+4. **Mark every rendered element with `data-var="varName"`** so the template's diff-highlight system can flash elements when their underlying variable changes between states.
+
+5. **Use Unicode symbols for status, not text labels.** `●` for active, `○` for idle, `✓` for done, `✗` for failed, `→` for flow direction, `⏳` for waiting. These are universally legible and compact.
+
+6. **Render collections structurally.** Sets → badge groups. Sequences → ordered lists or pipeline diagrams. Records/functions → entity cards or table rows. Never just stringify an array.
+
+#### Layout rules (critical)
+
+- **Represent state as data, not as pictures.** You are building a dashboard, not a diagram. A traffic intersection should be a table of light states per direction and a list of waiting cars — NOT an ASCII/HTML drawing of roads with cars positioned on them. A distributed system should be entity rows with status badges — NOT boxes with arrows drawn between them. The prototype panel is a narrow scrolling column; spatial simulations don't fit and always break.
+- **Use only normal document flow.** Build layouts with the template's utility classes (`.rs-card`, `.rs-grid-2`, `.rs-table`, etc.) which use flexbox and CSS grid. These stack and wrap predictably at every viewport size.
+- **NEVER use `position: absolute` or `position: fixed`** in renderState output. These cause elements to overlap and break at different state sizes.
+- **NEVER use CSS `transform`** — no `rotate()`, `translate()`, `scale()`, or any transform. Rotated elements render upside-down, overlap neighbors, and clip outside their containers. There is no valid use of transform in renderState.
+- **NEVER use negative margins** to pull elements out of their natural position. This creates overlapping content.
+- **NEVER build spatial/geographic layouts** (grids of positioned elements meant to represent physical locations, road maps, floor plans, circuit diagrams). These always break. Instead, represent the same information as a table or entity list — one row per actor/location, columns for state.
+- **NEVER use hardcoded pixel widths** wider than 300px on any single element. The prototype panel varies in size. Use percentages, `fr` units via `.rs-grid`, or `auto`.
+- **Avoid tall inline styles.** If you need custom styling beyond the utility classes, put it in `DOMAIN_STYLES` (the CSS marker block) and reference classes from renderState. This keeps renderState readable and prevents style conflicts.
+- **Every card should be a separate `.rs-card`.** Don't try to make one giant layout. Stack cards vertically — the template scrolls naturally. Use `.rs-grid-2` to put cards side by side only when the cards are small (e.g., a stat and a status).
+
+#### Template utility classes
+
+The template provides reusable CSS classes — prefer these over inline styles:
+
+| Class | Purpose |
+|-------|---------|
+| `.rs-card`, `.rs-card-header`, `.rs-card-title` | Card container with optional header row |
+| `.rs-grid`, `.rs-grid-2`, `.rs-grid-3`, `.rs-grid-4` | CSS grid layouts |
+| `.rs-badge-ok`, `.rs-badge-error`, `.rs-badge-warn`, `.rs-badge-info`, `.rs-badge-muted` | Status pill badges |
+| `.rs-table`, `.rs-table th`, `.rs-table td` | Styled data tables |
+| `.rs-meter`, `.rs-meter-fill`, `.rs-meter-fill.green/.red/.amber` | Horizontal progress/capacity bars |
+| `.rs-kv`, `.rs-kv-key`, `.rs-kv-val` | Key-value pair row |
+| `.rs-entity`, `.rs-entity-icon`, `.rs-entity-name`, `.rs-entity-detail` | Actor/process row with icon |
+| `.rs-pipeline`, `.rs-pipeline-step`, `.rs-pipeline-dot`, `.rs-pipeline-arrow` | Step-by-step pipeline diagram |
+| `.rs-heading` | Section heading within the prototype |
+
+These are already themed for light/dark and use the CSS variables.
+
+#### Choosing a visual pattern by variable type
+
+Study the `vars` in the state graph. Match each variable to the most natural visual pattern:
+
+| Variable shape | Visual pattern | Example |
+|---------------|----------------|---------|
+| Single enum string (e.g., `"idle"`, `"running"`) | Badge with status color | `<span class="rs-badge-ok">Running</span>` |
+| Integer representing quantity/capacity | Meter bar or large number | `.rs-meter` at N/MAX width |
+| Boolean flag | Icon toggle: `●`/`○` with color | Green circle vs grey circle |
+| Record mapping IDs → states (e.g., `{p1: "waiting", p2: "done"}`) | Entity list: one `.rs-entity` row per key | Each process as a row with icon + status |
+| Set of items | Badge group in a flex row | One `.rs-badge-*` per set member |
+| Sequence / queue | Ordered pipeline or numbered list | `.rs-pipeline` with items as steps |
+| Nested record (e.g., `{account: {balance: 100, locked: true}}`) | Nested card | `.rs-card` inside `.rs-card` |
+| Counter tracking progress | Meter + fraction label | `3 / 5` with `.rs-meter` at 60% |
+
+#### Example: process coordination domain
+
+Given vars: `{ procState: {p1: "waiting", p2: "critical", p3: "idle"}, resource: "p2", turn: 2 }`
+
+```javascript
+function renderState(vars) {
+  var procs = Object.keys(vars.procState);
+  var rows = procs.map(function(p) {
+    var st = vars.procState[p];
+    var icon = st === 'critical' ? '🔴' : st === 'waiting' ? '🟡' : '⚪';
+    var badge = st === 'critical' ? 'rs-badge-error' : st === 'waiting' ? 'rs-badge-warn' : 'rs-badge-muted';
+    var holding = vars.resource === p ? ' <span class="rs-badge-info">has resource</span>' : '';
+    return '<div class="rs-entity" data-var="procState">' +
+      '<div class="rs-entity-icon">' + icon + '</div>' +
+      '<div class="rs-entity-body">' +
+        '<div class="rs-entity-name">' + p.toUpperCase() + holding + '</div>' +
+        '<div class="rs-entity-detail"><span class="' + badge + '">' + st + '</span></div>' +
+      '</div></div>';
+  });
+  return '<div class="rs-card" data-var="procState">' +
+    '<div class="rs-card-header"><span class="rs-card-title">Processes</span>' +
+    '<span class="rs-badge-info" data-var="turn">Turn ' + vars.turn + '</span></div>' +
+    rows.join('') +
+  '</div>' +
+  '<div class="rs-card" data-var="resource">' +
+    '<div class="rs-kv"><span class="rs-kv-key">Resource held by</span>' +
+    '<span class="rs-kv-val">' + (vars.resource || 'nobody') + '</span></div>' +
+  '</div>';
+}
+```
+
+#### Example: queue/buffer domain
+
+Given vars: `{ queue: ["req1", "req2"], processing: "req0", done: ["reqA"], capacity: 5 }`
+
+```javascript
+function renderState(vars) {
+  var queueItems = vars.queue.map(function(item) {
+    return '<span class="rs-badge-warn" data-var="queue">' + item + '</span>';
+  }).join(' ');
+  var doneItems = vars.done.map(function(item) {
+    return '<span class="rs-badge-ok" data-var="done">' + item + '</span>';
+  }).join(' ');
+  var pct = Math.round((vars.queue.length / vars.capacity) * 100);
+  return '<div class="rs-card">' +
+    '<div class="rs-card-header"><span class="rs-card-title">Queue</span>' +
+    '<span class="rs-badge-muted">' + vars.queue.length + ' / ' + vars.capacity + '</span></div>' +
+    '<div class="rs-meter" data-var="queue"><div class="rs-meter-fill' +
+    (pct > 80 ? ' red' : pct > 50 ? ' amber' : '') +
+    '" style="width:' + pct + '%"></div></div>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:8px">' + (queueItems || '<span class="rs-badge-muted">empty</span>') + '</div>' +
+  '</div>' +
+  '<div class="rs-card" data-var="processing">' +
+    '<div class="rs-kv"><span class="rs-kv-key">Processing</span>' +
+    '<span class="rs-kv-val">' + (vars.processing || '—') + '</span></div>' +
+  '</div>' +
+  '<div class="rs-card" data-var="done">' +
+    '<div class="rs-card-header"><span class="rs-card-title">Completed</span></div>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:4px">' + (doneItems || '<span class="rs-badge-muted">none</span>') + '</div>' +
+  '</div>';
+}
+```
+
+#### Example: account/transaction domain
+
+Given vars: `{ accounts: {alice: 100, bob: 50}, locked: ["alice"], pendingTransfer: {from: "alice", to: "bob", amount: 30} }`
+
+```javascript
+function renderState(vars) {
+  var accts = Object.keys(vars.accounts);
+  var rows = accts.map(function(name) {
+    var bal = vars.accounts[name];
+    var isLocked = vars.locked.indexOf(name) >= 0;
+    return '<tr data-var="accounts"><td>' + name + '</td>' +
+      '<td><span class="rs-kv-val">$' + bal + '</span></td>' +
+      '<td>' + (isLocked
+        ? '<span class="rs-badge-warn" data-var="locked">🔒 locked</span>'
+        : '<span class="rs-badge-ok">unlocked</span>') +
+      '</td></tr>';
+  });
+  var tx = vars.pendingTransfer;
+  var txHtml = tx
+    ? '<div class="rs-kv" data-var="pendingTransfer"><span class="rs-kv-key">Pending</span>' +
+      '<span class="rs-kv-val">' + tx.from + ' → ' + tx.to + ': $' + tx.amount + '</span></div>'
+    : '<div class="rs-kv" data-var="pendingTransfer"><span class="rs-kv-key">Pending</span>' +
+      '<span class="rs-kv-val" style="color:var(--text-3)">none</span></div>';
+  return '<div class="rs-card">' +
+    '<div class="rs-card-header"><span class="rs-card-title">Accounts</span></div>' +
+    '<table class="rs-table"><thead><tr><th>Name</th><th>Balance</th><th>Status</th></tr></thead>' +
+    '<tbody>' + rows.join('') + '</tbody></table>' +
+  '</div>' +
+  '<div class="rs-card">' + txHtml + '</div>';
+}
+```
+
+#### Example: traffic intersection domain (dashboard, NOT a drawing)
+
+Given vars: `{ lights: {north: "red", south: "red", east: "green", west: "green"}, waiting: {north: 3, south: 1, east: 0, west: 2}, phase: "EW_green", tick: 4 }`
+
+**WRONG** — do not draw a spatial intersection with positioned/rotated cars:
+```javascript
+// BAD: positioned divs, rotated elements, spatial layout — NEVER do this
+'<div style="position:relative;width:400px;height:400px">' +
+'<div style="position:absolute;top:0;left:180px;transform:rotate(180deg)">🚗</div>' + ...
+```
+
+**RIGHT** — render as a data dashboard:
+```javascript
+function renderState(vars) {
+  var dirs = Object.keys(vars.lights);
+  var rows = dirs.map(function(dir) {
+    var light = vars.lights[dir];
+    var badge = light === 'green' ? 'rs-badge-ok' : light === 'red' ? 'rs-badge-error' : 'rs-badge-warn';
+    var count = vars.waiting[dir];
+    return '<tr data-var="lights"><td style="text-transform:capitalize">' + dir + '</td>' +
+      '<td><span class="' + badge + '">' + light + '</span></td>' +
+      '<td data-var="waiting">' + count + ' car' + (count !== 1 ? 's' : '') + '</td></tr>';
+  });
+  return '<div class="rs-card">' +
+    '<div class="rs-card-header"><span class="rs-card-title">Intersection</span>' +
+    '<span class="rs-badge-info" data-var="phase">' + vars.phase + '</span></div>' +
+    '<table class="rs-table"><thead><tr><th>Direction</th><th>Light</th><th>Waiting</th></tr></thead>' +
+    '<tbody>' + rows.join('') + '</tbody></table>' +
+  '</div>' +
+  '<div class="rs-card" data-var="tick">' +
+    '<div class="rs-kv"><span class="rs-kv-key">Timer</span>' +
+    '<span class="rs-kv-val">' + vars.tick + '</span></div>' +
+  '</div>';
+}
+```
 
 ### 3. `INVARIANT_LABELS`
 
@@ -138,7 +328,16 @@ Include at least one happy path. If the spec has multiple meaningfully different
 
 ### 6. `DOMAIN_STYLES`
 
-Additional CSS that themes the playground to the domain. The template uses CSS custom properties (`--bg`, `--surface`, `--text-1`, `--accent`, `--green`, `--red`, `--amber`, etc.) — you can override these for domain theming.
+Additional CSS for domain-specific classes used by your `renderState`. This is where any custom styling lives — **not** in inline `style=` attributes inside renderState.
+
+Common uses:
+- Override CSS variables (`--accent`, `--green`, etc.) for domain-appropriate palette
+- Add domain-specific classes referenced by your renderState (e.g., `.account-row`, `.queue-slot`)
+- Style custom visual elements that go beyond the template utility classes
+
+The template provides CSS custom properties (`--bg`, `--surface`, `--text-1`, `--accent`, `--green`, `--red`, `--amber`, `--border`, `--surface-hover`, etc.). Override these to theme for the domain. Always define both light and dark variants if you override colors (use `:root.dark` selector for dark mode).
+
+Keep DOMAIN_STYLES focused — under 40 rules. If your renderState needs more than that, you're building too much custom layout. Lean on the template utility classes instead.
 
 ## Merging Into the Template
 
@@ -167,9 +366,12 @@ The playground template lives at `templates/playground.html` (relative to the pl
 ## Theming Guidelines
 
 - **Match the domain.** The prototype should feel like the real product, not a state machine debugger.
-- **Make state visible.** Every variable in `vars` should be visually represented.
+- **Make state visible.** Every variable in `vars` should be visually represented — but via the appropriate visual affordance (badges, meters, tables, entity rows), not as raw text.
 - **Invariant violations are dramatic.** Red highlights, shaking, clear error callouts.
 - **Keep it self-contained.** No external dependencies. Inline all CSS and JS. Use system fonts and Unicode symbols.
+- **Use the utility classes.** The template provides `.rs-card`, `.rs-table`, `.rs-badge-*`, `.rs-meter`, `.rs-entity`, `.rs-pipeline`, `.rs-grid-*`, `.rs-kv` — use them. They handle light/dark mode, borders, spacing, and responsive sizing. Custom CSS should go in `DOMAIN_STYLES`, not in inline styles scattered through renderState.
+- **Keep layouts flat and flowing.** Cards stack vertically. Tables and entity lists inside cards. No absolute positioning, no rotation, no overlapping elements. If it scrolls, that's fine — broken overlap is not.
+- **Test with both extremes.** The initial state (often empty/idle) and a busy state (many actors active, queues full) should both render cleanly without overflow or collision.
 
 ## Pre-Output Checklist
 
@@ -177,11 +379,17 @@ Before writing the file, verify:
 - [ ] GRAPH data injected (mechanical copy of the JSON)
 - [ ] renderState displays ALL variables from the state graph
 - [ ] renderState does NOT contain defensive null checks or fallback messages
+- [ ] renderState uses template utility classes (`.rs-card`, `.rs-table`, `.rs-badge-*`, `.rs-entity`, etc.) — not ad-hoc HTML
+- [ ] renderState uses `data-var="varName"` attributes on elements displaying each variable
+- [ ] renderState has ZERO `position: absolute`, ZERO `transform: rotate`, ZERO negative margins
+- [ ] renderState uses no inline `style=` beyond simple `width` percentages for meters — all custom styles are in DOMAIN_STYLES
+- [ ] Collections (sets, sequences, records) are rendered structurally (badge groups, tables, entity rows) — never stringified
+- [ ] The layout is all normal document flow — cards stack vertically, grids wrap, no overlapping
 - [ ] ACTION_LABELS covers all unique edge labels in the graph
 - [ ] INVARIANT_LABELS has an entry for every name in `GRAPH.invariants`
 - [ ] SCENARIO_LABELS has an entry for every violation ID in `GRAPH.violations`
 - [ ] HAPPY_PATHS has at least one happy-path trace with valid stateIds from the graph
-- [ ] DOMAIN_STYLES themes the prototype to the domain
+- [ ] DOMAIN_STYLES themes the prototype to the domain, using class selectors (no excessive rules — under 40)
 - [ ] No external dependencies — everything is inline
 - [ ] The HTML file opens correctly in a browser with no console errors
 

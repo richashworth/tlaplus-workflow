@@ -137,8 +137,66 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+.coverage-counter {
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--text-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 2px 10px;
+  border-radius: var(--pill);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ===== Scenario Progress Bar ===== */
+.scenario-progress {
+  height: 3px;
+  background: var(--surface-raised);
+  border-radius: 2px;
+  margin: 8px 0 4px;
+  overflow: hidden;
+  display: none;
+}
+.scenario-progress.visible { display: block; }
+.scenario-progress-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--accent);
+  transition: width 200ms ease;
+  width: 0%;
+}
+
 /* ===== Prototype Area ===== */
 #prototype { flex: 1; min-height: 0; }
+
+#prototype.transitioning {
+  animation: stateCrossfade 200ms ease;
+}
+
+@keyframes stateCrossfade {
+  0%   { opacity: 0.45; transform: translateY(2px); }
+  100% { opacity: 1;    transform: translateY(0); }
+}
+
+/* ===== Variable-Diff Highlighting ===== */
+[data-var].var-changed {
+  animation: varPulse 600ms ease;
+}
+
+@keyframes varPulse {
+  0%   { background-color: var(--accent-glow); outline: 2px solid var(--accent); outline-offset: 1px; }
+  100% { background-color: transparent; outline-color: transparent; }
+}
+
+[data-var].var-changed-enter {
+  animation: varEnter 400ms ease;
+}
+
+@keyframes varEnter {
+  0%   { background-color: var(--green-bg); outline: 2px solid var(--green); outline-offset: 1px; }
+  100% { background-color: transparent; outline-color: transparent; }
+}
 
 /* ===== Action Buttons ===== */
 .actions-bar {
@@ -337,7 +395,9 @@ body {
   transition: background var(--fast);
 }
 
+.trace-entry { cursor: pointer; }
 .trace-entry:hover { background: var(--surface-hover); }
+.trace-entry.current { background: var(--accent-glow); border-radius: var(--radius-sm); }
 
 .trace-step {
   flex-shrink: 0;
@@ -543,6 +603,215 @@ body {
   }
 }
 
+/* ===== Utility Classes for renderState ===== */
+
+/* --- Cards --- */
+.rs-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 12px;
+  transition: border-color var(--med), box-shadow var(--med);
+}
+.rs-card:last-child { margin-bottom: 0; }
+.rs-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  gap: 8px;
+}
+.rs-card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-1);
+  letter-spacing: -0.01em;
+}
+
+/* --- Grid layouts --- */
+.rs-grid { display: grid; gap: 10px; }
+.rs-grid-2 { grid-template-columns: 1fr 1fr; }
+.rs-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+.rs-grid-4 { grid-template-columns: repeat(4, 1fr); }
+
+/* --- Status badges --- */
+.rs-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: var(--pill);
+  letter-spacing: 0.02em;
+}
+.rs-badge-ok     { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+.rs-badge-error  { background: var(--red-bg);   color: var(--red);   border: 1px solid var(--red-border); }
+.rs-badge-warn   { background: var(--amber-bg); color: var(--amber); border: 1px solid rgba(176,120,0,0.18); }
+.rs-badge-info   { background: var(--accent-glow); color: var(--accent); border: 1px solid rgba(59,95,212,0.18); }
+.rs-badge-muted  { background: var(--surface-raised); color: var(--text-2); border: 1px solid var(--border); }
+
+/* --- Tables --- */
+.rs-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.rs-table th {
+  text-align: left;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-3);
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border-mid);
+}
+.rs-table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-1);
+  vertical-align: middle;
+}
+.rs-table tr:last-child td { border-bottom: none; }
+.rs-table tr:hover td { background: var(--surface-hover); }
+
+/* --- Meters/Progress --- */
+.rs-meter {
+  height: 6px;
+  background: var(--surface-raised);
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+}
+.rs-meter-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--accent);
+  transition: width 300ms ease;
+}
+.rs-meter-fill.green  { background: var(--green); }
+.rs-meter-fill.red    { background: var(--red); }
+.rs-meter-fill.amber  { background: var(--amber); }
+
+/* --- Key/Value pairs --- */
+.rs-kv {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 4px 0;
+  font-size: 13px;
+}
+.rs-kv + .rs-kv { border-top: 1px solid var(--border); }
+.rs-kv-key {
+  color: var(--text-2);
+  font-weight: 500;
+}
+.rs-kv-val {
+  color: var(--text-1);
+  font-weight: 600;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+/* --- Entity rows (for actors/processes) --- */
+.rs-entity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  transition: background var(--fast);
+}
+.rs-entity + .rs-entity { border-top: 1px solid var(--border); }
+.rs-entity-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--surface-raised);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+.rs-entity-body { flex: 1; min-width: 0; }
+.rs-entity-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+.rs-entity-detail {
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+/* --- Sequence / pipeline --- */
+.rs-pipeline {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  overflow-x: auto;
+}
+.rs-pipeline-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-2);
+  position: relative;
+  white-space: nowrap;
+}
+.rs-pipeline-step.active {
+  color: var(--accent);
+  font-weight: 700;
+}
+.rs-pipeline-step.done {
+  color: var(--green);
+}
+.rs-pipeline-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--border-mid);
+  border: 2px solid var(--surface);
+  box-shadow: 0 0 0 1px var(--border-mid);
+}
+.rs-pipeline-step.active .rs-pipeline-dot {
+  background: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent), 0 0 6px var(--accent-glow);
+}
+.rs-pipeline-step.done .rs-pipeline-dot {
+  background: var(--green);
+  box-shadow: 0 0 0 1px var(--green);
+}
+.rs-pipeline-arrow {
+  flex-shrink: 0;
+  width: 24px;
+  height: 2px;
+  background: var(--border-mid);
+}
+
+/* --- Section heading inside renderState --- */
+.rs-heading {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-3);
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* --- Empty / placeholder state --- */
+.rs-empty {
+  text-align: center;
+  padding: 32px;
+  color: var(--text-3);
+  font-size: 13px;
+}
+
 /* === GENERATED: DOMAIN_STYLES === */
 /* === END GENERATED === */
 </style>
@@ -555,6 +824,7 @@ body {
     <div class="prototype-header">
       <h1 id="page-title">System Playground</h1>
       <div style="display:flex;align-items:center;gap:8px;">
+        <span class="coverage-counter" id="coverage-counter" title="Unique states visited / total states in graph">0 / 0 states</span>
         <span class="step-counter" id="step-counter">Step 0</span>
         <button id="theme-toggle" class="theme-toggle" onclick="toggleTheme()" title="Toggle dark/light theme" aria-label="Toggle theme">
           <span class="toggle-track">
@@ -601,6 +871,7 @@ body {
         <option value="">Choose a scenario...</option>
       </select>
       <div class="scenario-description" id="scenario-description"></div>
+      <div class="scenario-progress" id="scenario-progress"><div class="scenario-progress-fill" id="scenario-progress-fill"></div></div>
       <div class="scenario-controls">
         <button class="scenario-btn" id="scenario-reset" disabled>Reset</button>
         <button class="scenario-btn primary" id="scenario-step" disabled>Next Step</button>
@@ -654,10 +925,15 @@ function renderState(vars) {
 // =====================================================================
 
 let currentStateId = GRAPH.initialStateId;
+let previousVars = null;
+let visitedStates = {};
 let traceLog = [];
 let scenarioIndex = -1;
 let activeScenario = null;
 let pendingTimeouts = [];
+
+// Count total states in graph
+var totalStates = Object.keys(GRAPH.states).length;
 
 function getState(id) {
   return GRAPH.states[id || currentStateId];
@@ -737,13 +1013,27 @@ function renderTrace() {
     el.innerHTML = '<div class="trace-empty">No actions taken yet. Click an action to begin.</div>';
     return;
   }
-  el.innerHTML = traceLog.map(function(entry) {
-    return '<div class="trace-entry">' +
+  el.innerHTML = traceLog.map(function(entry, idx) {
+    var isCurrent = (idx === traceLog.length - 1) && (entry.toId === currentStateId);
+    return '<div class="trace-entry' + (isCurrent ? ' current' : '') + '" data-trace-idx="' + idx + '" title="Click to jump to this state">' +
       '<span class="trace-step">' + entry.step + '.</span>' +
       '<span class="trace-dot"></span>' +
       '<span class="trace-action">' + escapeHtml(entry.action) + '</span>' +
       '</div>';
   }).join('');
+
+  // Attach click handlers for trace navigation
+  el.querySelectorAll('.trace-entry[data-trace-idx]').forEach(function(row) {
+    row.addEventListener('click', function() {
+      var idx = parseInt(row.getAttribute('data-trace-idx'));
+      var entry = traceLog[idx];
+      if (entry && entry.toId) {
+        currentStateId = entry.toId;
+        renderAll();
+      }
+    });
+  });
+
   el.scrollTop = el.scrollHeight;
 }
 
@@ -814,17 +1104,74 @@ function checkInvariants() {
 
 function renderAll() {
   var state = getState();
-  document.getElementById('prototype').innerHTML = state ? renderState(state.vars) : '<p style="color:var(--text-3);text-align:center;padding:40px;">State not found in graph.</p>';
+  var protoEl = document.getElementById('prototype');
+  protoEl.innerHTML = state ? renderState(state.vars) : '<p style="color:var(--text-3);text-align:center;padding:40px;">State not found in graph.</p>';
+
+  // Crossfade animation on state change
+  protoEl.classList.remove('transitioning');
+  void protoEl.offsetWidth; // force reflow
+  protoEl.classList.add('transitioning');
+
+  // Variable-diff highlighting: flash elements whose data-var changed
+  if (state && previousVars) {
+    var changedVars = diffVars(previousVars, state.vars);
+    changedVars.forEach(function(varName) {
+      var els = protoEl.querySelectorAll('[data-var="' + varName + '"]');
+      els.forEach(function(el) {
+        el.classList.remove('var-changed');
+        void el.offsetWidth;
+        el.classList.add('var-changed');
+      });
+    });
+  }
+  if (state) previousVars = JSON.parse(JSON.stringify(state.vars));
+
+  // Track visited states
+  if (currentStateId) visitedStates[currentStateId] = true;
+  var visitedCount = Object.keys(visitedStates).length;
+  document.getElementById('coverage-counter').textContent = visitedCount + ' / ' + totalStates + ' states';
+
   document.getElementById('step-counter').textContent = 'Step ' + traceLog.length;
   renderActions();
   renderTrace();
   checkInvariants();
+  updateScenarioProgress();
+}
+
+// Deep-compare previous and current vars, return list of changed variable names
+function diffVars(prev, curr) {
+  var changed = [];
+  var allKeys = {};
+  Object.keys(prev).forEach(function(k) { allKeys[k] = true; });
+  Object.keys(curr).forEach(function(k) { allKeys[k] = true; });
+  Object.keys(allKeys).forEach(function(k) {
+    if (JSON.stringify(prev[k]) !== JSON.stringify(curr[k])) {
+      changed.push(k);
+    }
+  });
+  return changed;
+}
+
+// Update scenario progress bar
+function updateScenarioProgress() {
+  var bar = document.getElementById('scenario-progress');
+  var fill = document.getElementById('scenario-progress-fill');
+  if (activeScenario && activeScenario.trace) {
+    bar.classList.add('visible');
+    var pct = Math.round(((scenarioIndex + 1) / activeScenario.trace.length) * 100);
+    fill.style.width = pct + '%';
+  } else {
+    bar.classList.remove('visible');
+    fill.style.width = '0%';
+  }
 }
 
 function resetPlayground() {
   pendingTimeouts.forEach(function(id) { clearTimeout(id); });
   pendingTimeouts = [];
   currentStateId = GRAPH.initialStateId;
+  previousVars = null;
+  visitedStates = {};
   traceLog = [];
   activeScenario = null;
   scenarioIndex = -1;
