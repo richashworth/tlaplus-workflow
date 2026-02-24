@@ -43,7 +43,7 @@ The JSON has this structure:
 
 ## What You Generate
 
-You produce **6 pieces** that plug into the template:
+You produce **7 pieces** that plug into the template:
 
 ### 1. `ACTION_LABELS`
 
@@ -332,16 +332,59 @@ Include at least one happy path. If the spec has multiple meaningfully different
 
 ### 6. `DOMAIN_STYLES`
 
-Additional CSS for domain-specific classes used by your `renderState`. This is where any custom styling lives — **not** in inline `style=` attributes inside renderState.
+Additional CSS for domain-specific classes used by your `renderState` and `renderStateVisual`. This is where any custom styling lives — **not** in inline `style=` attributes inside the render functions.
 
 Common uses:
 - Override CSS variables (`--accent`, `--green`, etc.) for domain-appropriate palette
-- Add domain-specific classes referenced by your renderState (e.g., `.account-row`, `.queue-slot`)
+- Add domain-specific classes referenced by your render functions (e.g., `.account-row`, `.queue-slot`)
 - Style custom visual elements that go beyond the template utility classes
 
 The template provides CSS custom properties (`--bg`, `--surface`, `--text-1`, `--accent`, `--green`, `--red`, `--amber`, `--border`, `--surface-hover`, etc.). Override these to theme for the domain. Always define both light and dark variants if you override colors (use `:root.dark` selector for dark mode).
 
-Keep DOMAIN_STYLES focused — under 40 rules. If your renderState needs more than that, you're building too much custom layout. Lean on the template utility classes instead.
+Keep DOMAIN_STYLES focused — under 60 rules (covers both views). If you need more, you're building too much custom layout. Lean on the template utility classes instead.
+
+### 7. `renderStateVisual(vars)`
+
+A function receiving the same `vars` object as `renderState` but returning a **visual/diagrammatic** HTML representation — the kind a PM or stakeholder would show in a slide deck. This powers the "Visual" tab in the playground.
+
+Unlike `renderState` (which must be a clean data dashboard), `renderStateVisual` is free to be more creative and spatial. However, the same `vars` are displayed — the difference is presentation, not content.
+
+**What makes a good visual view:**
+- Use domain-appropriate imagery: colored circles for traffic lights, box diagrams for architecture, flow layouts for pipelines
+- Use large, clear emoji or Unicode symbols as visual anchors (e.g., `🔴🟡🟢` for traffic lights, `🔒` for locks, `📦` for queues)
+- Group related elements visually — use `.rs-grid-2` or `.rs-grid-3` to lay out actors side by side
+- Keep text minimal — labels and status only, no tables of raw data
+
+**Layout constraints still apply:**
+- Use the utility classes (`.rs-card`, `.rs-grid-*`, `.rs-badge-*`, `.rs-entity`, etc.)
+- No `position: absolute`, no `transform`, no negative margins — same rules as `renderState`
+- The visual tab still lives in the same narrow scrolling column, so the layout must flow normally
+- Put custom styles in `DOMAIN_STYLES`, not inline
+
+**The visual tab banner:** The template automatically shows a hint above the visual view saying "This is a first-pass visual — ask Claude to refine the layout, colors, or icons in your session." You do not need to add this yourself.
+
+**Example:** For the traffic intersection, `renderState` shows a table; `renderStateVisual` shows:
+
+```javascript
+function renderStateVisual(vars) {
+  var dirs = Object.keys(vars.lights);
+  var cards = dirs.map(function(dir) {
+    var light = vars.lights[dir];
+    var icon = light === 'green' ? '🟢' : light === 'red' ? '🔴' : '🟡';
+    var count = vars.waiting[dir];
+    return '<div class="rs-card" style="text-align:center" data-var="lights">' +
+      '<div style="font-size:32px;margin-bottom:4px">' + icon + '</div>' +
+      '<div class="rs-card-title" style="text-transform:capitalize">' + dir + '</div>' +
+      '<div class="rs-entity-detail" data-var="waiting">' + count + ' car' + (count !== 1 ? 's' : '') + ' waiting</div>' +
+    '</div>';
+  });
+  return '<div class="rs-grid rs-grid-2">' + cards.join('') + '</div>' +
+    '<div class="rs-card" style="text-align:center" data-var="phase">' +
+      '<span class="rs-badge-info" style="font-size:14px">' + vars.phase + '</span>' +
+      '<span class="rs-entity-detail" data-var="tick"> \u00b7 tick ' + vars.tick + '</span>' +
+    '</div>';
+}
+```
 
 ## Merging Into the Template
 
@@ -362,7 +405,8 @@ The playground template lives at `templates/playground.html` (relative to the pl
    - **INVARIANT_LABELS**: Inject your generated invariant descriptions
    - **SCENARIO_LABELS**: Inject your generated scenario metadata
    - **HAPPY_PATHS**: Inject your generated happy-path traces array
-   - **renderState**: Inject your generated function
+   - **renderState**: Inject your generated data-view function
+   - **renderStateVisual**: Inject your generated visual-view function
    - **DOMAIN_STYLES**: Inject your generated CSS (in the `<style>` block)
 6. Update the page `<title>` to match the domain
 7. Write the merged result to `<spec_dir>/<ModuleName>/playground.html`
@@ -381,19 +425,20 @@ The playground template lives at `templates/playground.html` (relative to the pl
 
 Before writing the file, verify:
 - [ ] GRAPH data injected (mechanical copy of the JSON)
-- [ ] renderState displays ALL variables from the state graph
+- [ ] renderState (Data tab) displays ALL variables from the state graph
 - [ ] renderState does NOT contain defensive null checks or fallback messages
 - [ ] renderState uses template utility classes (`.rs-card`, `.rs-table`, `.rs-badge-*`, `.rs-entity`, etc.) — not ad-hoc HTML
 - [ ] renderState uses `data-var="varName"` attributes on elements displaying each variable
-- [ ] renderState has ZERO `position: absolute`, ZERO `transform: rotate`, ZERO negative margins
-- [ ] renderState uses no inline `style=` beyond simple `width` percentages for meters — all custom styles are in DOMAIN_STYLES
+- [ ] renderStateVisual (Visual tab) displays the same variables in a more graphical/stakeholder-friendly way
+- [ ] Both render functions have ZERO `position: absolute`, ZERO `transform`, ZERO negative margins
+- [ ] Both render functions use utility classes and put custom CSS in DOMAIN_STYLES
 - [ ] Collections (sets, sequences, records) are rendered structurally (badge groups, tables, entity rows) — never stringified
 - [ ] The layout is all normal document flow — cards stack vertically, grids wrap, no overlapping
 - [ ] ACTION_LABELS covers all unique edge labels in the graph
 - [ ] INVARIANT_LABELS has an entry for every name in `GRAPH.invariants`
 - [ ] SCENARIO_LABELS has an entry for every violation ID in `GRAPH.violations`
 - [ ] HAPPY_PATHS has at least one happy-path trace with valid stateIds from the graph
-- [ ] DOMAIN_STYLES themes the prototype to the domain, using class selectors (no excessive rules — under 40)
+- [ ] DOMAIN_STYLES themes both views to the domain (under 60 rules)
 - [ ] No external dependencies — everything is inline
 - [ ] The HTML file opens correctly in a browser with no console errors
 

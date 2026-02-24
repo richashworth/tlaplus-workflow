@@ -812,6 +812,53 @@ body {
   font-size: 13px;
 }
 
+/* ===== View Tabs ===== */
+.view-tabs {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 16px;
+  background: var(--surface-raised);
+  border-radius: var(--radius);
+  padding: 3px;
+}
+
+.view-tab {
+  flex: 1;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-family: var(--font);
+  font-weight: 600;
+  color: var(--text-3);
+  background: transparent;
+  border: none;
+  border-radius: calc(var(--radius) - 2px);
+  cursor: pointer;
+  transition: all var(--fast);
+  text-align: center;
+}
+
+.view-tab:hover { color: var(--text-2); }
+
+.view-tab.active {
+  color: var(--text-1);
+  background: var(--surface);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+.view-panel { display: none; flex: 1; min-height: 0; overflow-y: auto; }
+.view-panel.active { display: block; }
+
+.visual-hint {
+  font-size: 12px;
+  color: var(--text-3);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
 /* === GENERATED: DOMAIN_STYLES === */
 /* === END GENERATED === */
 </style>
@@ -834,8 +881,18 @@ body {
       </div>
     </div>
 
-    <div id="prototype">
-      <!-- renderState() output goes here -->
+    <div class="view-tabs" id="view-tabs">
+      <button class="view-tab active" data-tab="data" onclick="switchTab('data')">Data</button>
+      <button class="view-tab" data-tab="visual" onclick="switchTab('visual')">Visual</button>
+    </div>
+
+    <div id="prototype" class="view-panel active">
+      <!-- renderState() output goes here (data dashboard) -->
+    </div>
+
+    <div id="prototype-visual" class="view-panel">
+      <div class="visual-hint">This is a first-pass visual — ask Claude to refine the layout, colors, or icons in your session.</div>
+      <!-- renderStateVisual() output goes here (domain diagram) -->
     </div>
 
     <div class="actions-bar">
@@ -917,6 +974,12 @@ const HAPPY_PATHS = [];
 // === GENERATED: renderState ===
 function renderState(vars) {
   return '<p style="color:var(--text-3);padding:40px;text-align:center;">No prototype renderer loaded.</p>';
+}
+// === END GENERATED ===
+
+// === GENERATED: renderStateVisual ===
+function renderStateVisual(vars) {
+  return '<p style="color:var(--text-3);padding:40px;text-align:center;">No visual renderer loaded.</p>';
 }
 // === END GENERATED ===
 
@@ -1102,17 +1165,37 @@ function checkInvariants() {
   });
 }
 
+var activeTab = 'data';
+
+function switchTab(tab) {
+  activeTab = tab;
+  document.querySelectorAll('.view-tab').forEach(function(btn) {
+    btn.classList.toggle('active', btn.getAttribute('data-tab') === tab);
+  });
+  document.getElementById('prototype').classList.toggle('active', tab === 'data');
+  document.getElementById('prototype-visual').classList.toggle('active', tab === 'visual');
+}
+
 function renderAll() {
   var state = getState();
+  var fallback = '<p style="color:var(--text-3);text-align:center;padding:40px;">State not found in graph.</p>';
+
+  // Data view (always rendered — it's the reliable baseline)
   var protoEl = document.getElementById('prototype');
-  protoEl.innerHTML = state ? renderState(state.vars) : '<p style="color:var(--text-3);text-align:center;padding:40px;">State not found in graph.</p>';
+  protoEl.innerHTML = state ? renderState(state.vars) : fallback;
 
-  // Crossfade animation on state change
-  protoEl.classList.remove('transitioning');
-  void protoEl.offsetWidth; // force reflow
-  protoEl.classList.add('transitioning');
+  // Visual view
+  var visualEl = document.getElementById('prototype-visual');
+  var hintHtml = '<div class="visual-hint">This is a first-pass visual \u2014 ask Claude to refine the layout, colors, or icons in your session.</div>';
+  visualEl.innerHTML = state ? hintHtml + renderStateVisual(state.vars) : fallback;
 
-  // Variable-diff highlighting: flash elements whose data-var changed
+  // Crossfade animation on the active panel
+  var activeEl = activeTab === 'visual' ? visualEl : protoEl;
+  activeEl.classList.remove('transitioning');
+  void activeEl.offsetWidth;
+  activeEl.classList.add('transitioning');
+
+  // Variable-diff highlighting on data view
   if (state && previousVars) {
     var changedVars = diffVars(previousVars, state.vars);
     changedVars.forEach(function(varName) {
