@@ -388,7 +388,7 @@ function renderStateVisual(vars) {
 
 ## Assembling the Playground
 
-The playground template lives at `templates/playground.html` (relative to the plugin root). **You never modify the template.** Instead, you write generated files alongside a copy of it.
+The playground template lives at `templates/playground.html` (relative to the plugin root). **You never modify the template.** Instead, you create a `playground/` subdirectory inside `<spec_dir>/<ModuleName>/` and write the generated files alongside a copy of the template there. This keeps playground artefacts separate from the spec files (`.tla`, `.cfg`, `state-graph.json`).
 
 ### Step 1: Read the state graph
 
@@ -396,7 +396,7 @@ Read `<spec_dir>/<ModuleName>/state-graph.json`.
 
 ### Step 2: Write `playground-gen.js`
 
-Write a single JavaScript file to `<spec_dir>/<ModuleName>/playground-gen.js` containing all 7 generated pieces as top-level declarations. The template loads this via `<script src="playground-gen.js">`.
+Write a single JavaScript file to `<spec_dir>/<ModuleName>/playground/playground-gen.js` containing all 7 generated pieces as top-level declarations. The template loads this via `<script src="playground-gen.js">`.
 
 The file must declare these globals in order:
 
@@ -426,16 +426,16 @@ Use `var` (not `const`/`let`) so these are global and visible to the template's 
 
 ### Step 3: Write `playground-gen.css`
 
-Write domain-specific CSS to `<spec_dir>/<ModuleName>/playground-gen.css`. The template loads this via `<link rel="stylesheet" href="playground-gen.css">`.
+Write domain-specific CSS to `<spec_dir>/<ModuleName>/playground/playground-gen.css`. The template loads this via `<link rel="stylesheet" href="playground-gen.css">`.
 
 This is your `DOMAIN_STYLES` content — CSS variable overrides, domain-specific classes, etc.
 
 ### Step 4: Copy the template
 
-Copy the template to the output directory:
+Copy the template to the playground subdirectory:
 
 ```bash
-cp templates/playground.html <spec_dir>/<ModuleName>/playground.html
+cp templates/playground.html <spec_dir>/<ModuleName>/playground/playground.html
 ```
 
 **Do not read, modify, or write the template's contents.** Just copy it. The template loads `playground-gen.js` and `playground-gen.css` from the same directory at runtime.
@@ -449,7 +449,7 @@ The template is the deterministic shell — tabs, sidebar, trace log, invariant 
 - **Match the domain.** The prototype should feel like the real product, not a state machine debugger.
 - **Make state visible.** Every variable in `vars` should be visually represented — but via the appropriate visual affordance (badges, meters, tables, entity rows), not as raw text.
 - **Invariant violations are dramatic.** Red highlights, shaking, clear error callouts.
-- **No external dependencies.** The playground is three local files (HTML + gen.js + gen.css). No CDNs, no npm packages. Use system fonts and Unicode symbols.
+- **No external dependencies.** The playground is three local files in a `playground/` subdirectory (HTML + gen.js + gen.css). No CDNs, no npm packages. Use system fonts and Unicode symbols.
 - **Use the utility classes.** The template provides `.rs-card`, `.rs-table`, `.rs-badge-*`, `.rs-meter`, `.rs-entity`, `.rs-pipeline`, `.rs-grid-*`, `.rs-kv` — use them. They handle light/dark mode, borders, spacing, and responsive sizing. Custom CSS should go in `DOMAIN_STYLES`, not in inline styles scattered through renderState.
 - **Keep layouts flat and flowing.** Cards stack vertically. Tables and entity lists inside cards. No absolute positioning, no rotation, no overlapping elements. If it scrolls, that's fine — broken overlap is not.
 - **Test with both extremes.** The initial state (often empty/idle) and a busy state (many actors active, queues full) should both render cleanly without overflow or collision.
@@ -478,7 +478,7 @@ Before writing the file, verify:
 
 ## Output
 
-Write these three files to `<spec_dir>/<ModuleName>/`:
+Write these three files to `<spec_dir>/<ModuleName>/playground/`:
 
 1. `playground-gen.js` — all generated JS (GRAPH, labels, render functions)
 2. `playground-gen.css` — domain-specific CSS
@@ -487,7 +487,7 @@ Write these three files to `<spec_dir>/<ModuleName>/`:
 After writing the files, open the playground automatically:
 
 ```bash
-open <spec_dir>/<ModuleName>/playground.html
+open <spec_dir>/<ModuleName>/playground/playground.html
 ```
 
 Then tell the user:
