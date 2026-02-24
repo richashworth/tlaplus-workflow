@@ -230,6 +230,35 @@ The resulting JSON has the same shape as a full graph — `states`, `transitions
 
 ---
 
+### 3.4 `playground_init` — Initialize Playground Directory
+
+**Used by:** skill (after animator writes generated files)
+
+**Purpose:** Create the playground directory and copy the bundled HTML template into it. The server ships with `templates/playground.html` so this operation is fully deterministic — no searching or path guessing required.
+
+**Parameters:**
+
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `target_dir` | string | yes | Absolute path to the playground directory (e.g., `<spec_dir>/<ModuleName>/playground/`) |
+
+**Expected return shape:**
+
+```json
+{
+  "html_path": "/absolute/path/to/playground/playground.html"
+}
+```
+
+**Behavioral notes:**
+- Create `target_dir` and any parent directories if they don't exist.
+- Copy the bundled `templates/playground.html` into `target_dir/playground.html`, overwriting if already present.
+- Return the absolute path to the copied HTML file — the skill uses this for `open`.
+- The template is a static file bundled with the MCP server distribution. It must not be modified during copy.
+- This tool does not touch `playground-gen.js` or `playground-gen.css` — those are written by the animator agent.
+
+---
+
 ## 4. MCP Tools — Secondary
 
 These tools are available to agents via the `mcp__tlaplus__*` wildcard but are not on the primary verification pipeline. They support advanced use cases.
@@ -409,10 +438,10 @@ The plugin expects this directory structure for derived artifacts:
       states.dot              # State graph in DOT format
     tlc-output.txt            # Raw TLC output (verifier saves)
     state-graph.json          # Parsed graph JSON (verifier saves)
-    playground/               # Playground subdirectory (animator creates)
-      playground.html         # Interactive playground (copied from template)
-      playground-gen.js       # Generated data + render functions
-      playground-gen.css      # Generated domain styles
+    playground/               # Playground subdirectory
+      playground.html         # Interactive playground (playground_init copies from bundled template)
+      playground-gen.js       # Generated data + render functions (animator writes)
+      playground-gen.css      # Generated domain styles (animator writes)
 ```
 
 The `dump_path` parameter in `tlc_check` tells TLC where to write the DOT file. The server should create parent directories if they don't exist. The actual filename within that directory is TLC's default (`states.dot` or similar).
@@ -466,6 +495,7 @@ The `dump_path` parameter in `tlc_check` tells TLC where to write the DOT file. 
 | `tla_parse` | Specify, Verify | Every run (2+ calls) | Critical |
 | `tlc_check` | Verify | Every run (1+ calls) | Critical |
 | `tla_state_graph` | Verify | Every run (1 call) | Critical |
+| `playground_init` | Animate | Every run (1 call) | Critical |
 | `tlc_simulate` | Ad-hoc exploration | Occasional | Secondary |
 | `pcal_translate` | PlusCal workflows | Occasional | Secondary |
 | `tla_evaluate` | Debugging | Occasional | Secondary |

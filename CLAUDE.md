@@ -12,11 +12,11 @@ Six agents, one skill, one MCP server:
 
 ## Critical path
 
-`tla_parse` (syntax check) → `tlc_check` (model check + state graph dump) → `tla_state_graph` (parse DOT → playground JSON)
+`tla_parse` (syntax check) → `tlc_check` (model check + state graph dump) → `tla_state_graph` (parse DOT → playground JSON) → `playground_init` (copy template into playground dir)
 
 ## Key conventions
 
 - The **structured system summary** (9-section markdown) is the handoff format between interview/extractor and specifier. See the skill for the format.
 - MCP tool contracts are documented in `mcp-server-reqts.md`.
 - The post-write hook (`hooks/check-tla-syntax.sh`) runs SANY on `.tla` files using the jar at `$HOME/.tlaplus-mcp/lib/tla2tools.jar`. Hook registration is in `hooks/hooks.json` (triggers on Write and Edit of `.tla` files).
-- `templates/playground.html` is the playground template — the deterministic shell (UI chrome, state engine, sidebar). The animator writes `playground-gen.js` (data + render functions) and `playground-gen.css` (domain styles) into a `playground/` subdirectory inside `<spec_dir>/<ModuleName>/`. The skill then copies the template into the same directory and opens it in the browser. The animator never touches the template. The template loads the gen files at runtime via `<script src>` and `<link>`.
+- `templates/playground.html` is the playground template — the deterministic shell (UI chrome, state engine, sidebar). The animator writes `playground-gen.js` (data + render functions) and `playground-gen.css` (domain styles) into a `playground/` subdirectory inside `<spec_dir>/<ModuleName>/`. The skill then calls the `playground_init` MCP tool to copy the template into the same directory (the MCP server bundles the template, so no path searching is needed), and opens the result in the browser. The animator never touches the template. The template loads the gen files at runtime via `<script src>` and `<link>`.

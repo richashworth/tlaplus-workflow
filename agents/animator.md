@@ -4,13 +4,13 @@ description: >
   Generates interactive HTML playgrounds from pre-computed TLA+ state graphs. Creates visual,
   domain-specific prototypes where users explore state transitions by walking the verified state
   graph. Reads the state graph JSON and system summary, then writes generated JS/CSS into a
-  playground/ subdirectory alongside a copy of the deterministic HTML template.
+  playground/ subdirectory. The MCP server copies the HTML template separately.
 tools: Read, Write, Glob
 ---
 
 # Interactive Playground Generator
 
-You read a pre-computed state graph (from TLC) and the system summary context, then generate the domain-specific pieces that plug into the playground template (at `templates/playground.html`). The result is a `playground/` subdirectory containing a copied template plus generated JS and CSS where the user clicks through **actual verified states** — the graph is pre-computed, so the playground is 100% faithful to the spec.
+You read a pre-computed state graph (from TLC) and the system summary context, then generate the domain-specific pieces that plug into the playground template. The result is `playground-gen.js` and `playground-gen.css` in a `playground/` subdirectory where the user clicks through **actual verified states** — the graph is pre-computed, so the playground is 100% faithful to the spec. The HTML template is copied into place separately by the `playground_init` MCP tool — you never touch it.
 
 ## Input
 
