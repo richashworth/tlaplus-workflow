@@ -14,10 +14,11 @@ You take a structured system summary (produced by the interview) and write a com
 ## Output Files
 
 Write all files to the `.tlaplus/` directory (create it if needed):
+
 - `.tlaplus/<ModuleName>.tla` — the specification
 - `.tlaplus/<ModuleName>.cfg` — the TLC config
 
-Use a CamelCase module name derived from the domain (e.g., `DistributedLock`, `OrderWorkflow`, `TokenBucket`).
+Use a descriptive CamelCase module name derived from the domain (e.g., `DistributedLock`, `OrderWorkflow`, `TokenBucket`). The module name must match the filename — this is a TLA+ requirement. Different aspects of a system get separate modules (e.g., `LockManager.tla` and `QueueOrdering.tla`).
 
 ## TLA+ Module Structure
 
@@ -60,7 +61,7 @@ Next ==
     \/ \E p \in Set : OtherAction(p)
 
 \* --- Specification ---
-Spec == Init /\ [][Next]_vars
+Spec == Init /\ [][Next]_vars /\ WF_vars(Next)
 
 \* --- Safety Invariants ---
 InvariantName ==
@@ -132,6 +133,50 @@ Rules for the config:
 5. Write the `.tla` file.
 6. Write the `.cfg` file.
 7. Double-check: every variable initialised? Every action guarded? Every UNCHANGED present? Every invariant listed in `.cfg`?
+
+## Fairness
+
+The default `Spec` includes `WF_vars(Next)` (weak fairness over the full next-state relation). This is correct for most systems — it says "if the system can always make progress, it eventually will."
+
+### When to use strong fairness (SF)
+
+Use `SF_vars(ActionName)` for a **specific action** when the action may be repeatedly enabled and disabled (e.g., by competing concurrent actions) but should still eventually fire. Weak fairness only guarantees firing if the action is **continuously** enabled.
+
+**Example:** A worker repeatedly tries to acquire a lock, but other workers keep grabbing it first. With weak fairness, the worker might starve forever. Strong fairness guarantees it eventually succeeds.
+
+To use per-action fairness instead of the blanket `WF_vars(Next)`:
+```tla
+Spec == Init /\ [][Next]_vars
+         /\ WF_vars(NormalAction)
+         /\ SF_vars(CompetedAction)
+```
+
+### When to adjust fairness
+
+Check the interview summary's "Fairness" subsection (if present). If a liveness property assumes an action succeeds despite repeated contention, use SF for that action. If the summary doesn't mention fairness or contention, the default WF is fine.
+
+### Process checklist update
+
+When writing a spec with liveness properties:
+- [ ] `Spec` includes appropriate fairness (WF at minimum)
+- [ ] Actions under contention use SF if the liveness property requires it
+- [ ] `.cfg` uses `PROPERTY` (not `INVARIANT`) for liveness
+
+## Symmetry
+
+When entities in a CONSTANT set are interchangeable (e.g., all workers are identical, all resources are fungible), use symmetry reduction to shrink the state space.
+
+**In the `.tla` file — define the symmetry set:**
+```tla
+Symmetry == Permutations(Workers) \union Permutations(Resources)
+```
+
+**In the `.cfg` file — declare it:**
+```
+SYMMETRY Symmetry
+```
+
+Only apply symmetry to sets whose elements are truly interchangeable — they must appear identically in Init, all actions, and all invariants. If any action treats one element specially (e.g., a "primary" node), that set cannot use symmetry.
 
 ## Style
 

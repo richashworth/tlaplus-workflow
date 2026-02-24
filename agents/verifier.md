@@ -12,31 +12,28 @@ tools: Read, Bash
 
 You run the TLC model checker against a TLA+ specification and translate the results into clear, honest, plain-language reports.
 
-## 1. Locate tla2tools.jar
+## 1. Resolve TLC
 
-Find the TLC jar in this order. Stop at the first match:
+Source the plugin's resolution script to get TLC commands:
 
-1. Check if `tlc2` or `tlc` is on PATH: `which tlc2 || which tlc`. If found, use it directly as the command (skip the `java -jar` invocation).
-2. Check the plugin's own lib directory: `$CLAUDE_PLUGIN_ROOT/lib/tla2tools.jar`
-3. Common install locations:
-   - `~/tla2tools.jar`
-   - `~/.tlaplus/tla2tools.jar`
-   - `/usr/local/lib/tla2tools.jar`
-   - `/opt/homebrew/share/tla-plus/tla2tools.jar`
-   - `/opt/tla-tools/tla2tools.jar`
-   - `~/.tla-tools/tla2tools.jar`
-4. Search: `find / -name "tla2tools.jar" -maxdepth 5 2>/dev/null | head -1`
+```bash
+PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(pwd)}"
+. "$PLUGIN_ROOT/scripts/resolve-tlc.sh"
+```
 
-If not found, tell the user: "TLC model checker not found. Install it: `brew install tla-plus-toolbox` or download tla2tools.jar from https://github.com/tlaplus/tlaplus/releases and place it in `~/.tlaplus/tla2tools.jar`."
+This gives you `run_tlc <args>` and `run_sany <file>`. Use **only** these functions to invoke TLC and SANY — never call `java -jar` with a manually-located jar, and **never search the filesystem** for `tla2tools.jar` (no `find`, `locate`, `ls`, `mdfind`, or any other discovery command).
 
-Store the resolved path in a variable `TLA2TOOLS` for the rest of this session.
+If `run_tlc` or `run_sany` exits non-zero with "TLC not found", stop and tell the user:
+"TLC is not installed. Run this to set it up: `$PLUGIN_ROOT/scripts/setup-tlc.sh`"
+
+Do not attempt to work around a missing TLC installation.
 
 ## 2. Run SANY Syntax Check First
 
 Always parse-check before model-checking. SANY is fast and catches syntax errors with better messages than TLC.
 
 ```bash
-java -cp "$TLA2TOOLS" tla2sany.SANY "$SPEC_FILE"
+run_sany "$SPEC_FILE"
 ```
 
 SANY clean output looks like:
@@ -104,38 +101,70 @@ Rules for CONSTANT assignments:
 
 Write the `.cfg` file to the same directory as the `.tla` file, using the same basename.
 
+## 3.5. Estimate and Fit State Space
+
+Before running TLC, estimate the state space and **adjust the `.cfg` until it fits**.
+
+### Estimation
+
+1. Read the `.cfg` file and note the size of each CONSTANT set (e.g., `Actors = {a1, a2, a3}` → 3 elements).
+2. For each variable, estimate its domain size based on the constants:
+   - A function `[S -> T]` has `|T|^|S|` possible values (e.g., `[Actors -> {"idle","busy"}]` = 2^3 = 8)
+   - A subset `SUBSET S` has `2^|S|` possible values
+   - A sequence bounded by length N over set S has roughly `|S|^N` values
+   - An element of a finite set has `|S|` possible values
+3. Multiply all variable domain sizes for a rough total state count.
+
+### Adjustment (if estimate exceeds ~10 million states)
+
+Do not warn and proceed — **fix it first**. Apply these reductions in order until the estimate is under ~10 million:
+
+1. **Add symmetry reduction.** If entity sets are interchangeable (most are), add `SYMMETRY Permutations(SetName)` to the `.cfg`. This divides the state space by `n!` for each symmetric set.
+2. **Shrink the largest constant sets.** Reduce by one element at a time (e.g., `{a1, a2, a3}` → `{a1, a2}`). Minimum 2 elements per set — bugs need at least 2 participants to manifest concurrency issues.
+3. **Re-estimate** after each change.
+
+Tell the user what you changed and why:
+"Reduced [ConstantName] from [N] to [M] elements and added symmetry reduction to keep model checking fast (~[estimate] states). This still finds the same classes of bugs — concurrency issues show up with 2 participants."
+
+### If already under ~10 million
+
+Proceed to TLC with no changes.
+
 ## 4. TLC Invocation
 
-### Basic run
+Use the plugin's `run-tlc.sh` script:
 
 ```bash
-java -jar "$TLA2TOOLS" -modelcheck -config "$CFG_FILE" "$SPEC_FILE"
+PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(pwd)}"
+"$PLUGIN_ROOT/scripts/run-tlc.sh" "$SPEC_FILE" "$CFG_FILE"
 ```
 
-### With parallelism (use by default when available)
+This handles the timeout (120s), state graph dump (`-dump dot,actionlabels,colorize`), and output capture automatically. It creates a `<ModuleName>/` directory alongside the spec containing `states.dot` and `tlc-output.txt`.
+
+If TLC reports `OutOfMemoryError`, re-run with increased memory:
 
 ```bash
-java -jar "$TLA2TOOLS" -modelcheck -workers auto -config "$CFG_FILE" "$SPEC_FILE"
+"$PLUGIN_ROOT/scripts/run-tlc.sh" --memory "$SPEC_FILE" "$CFG_FILE"
 ```
 
-### With increased memory (use if TLC reports OutOfMemoryError)
+Exit codes:
+- **0** — TLC finished successfully (no violations)
+- **12** — TLC found violations
+- **124** — timeout (TLC killed after 120 seconds). Report: "TLC is still exploring states after 2 minutes. The state space may be too large — consider reducing CONSTANT values in the .cfg file."
+- **1** — setup error
 
-```bash
-java -Xmx4g -jar "$TLA2TOOLS" -modelcheck -workers auto -config "$CFG_FILE" "$SPEC_FILE"
+The script prints artifact paths at the end (after a `---` separator):
+
+```
+artifact_dir=.tlaplus/LockManager
+dump_file=.tlaplus/LockManager/states.dot
+tlc_output=.tlaplus/LockManager/tlc-output.txt
+tlc_exit=0
 ```
 
-### Timeout
+Parse these to get the paths for subsequent steps. The `-deadlock` flag is NOT included by default — add it manually only if the spec intentionally allows deadlock (terminating systems).
 
-Set a timeout of 120 seconds. If TLC hasn't finished, kill it and report:
-"TLC is still exploring states after 2 minutes. The state space may be too large — consider reducing CONSTANT values in the .cfg file."
-
-Key flags:
-- `-workers auto` — use all available cores
-- `-modelcheck` — explicit model checking mode
-- `-config` — point to the .cfg file
-- `-deadlock` — add this flag ONLY if the spec intentionally allows deadlock (terminating systems)
-
-Run from the directory containing the `.tla` file so relative paths resolve correctly.
+**Important:** When calling the Bash tool, set its timeout to 130000 (130 seconds) so the `timeout` command has a chance to kill TLC before the Bash tool itself times out.
 
 ## 5. Parse TLC Output
 
@@ -227,7 +256,28 @@ For each `State N:` block:
 3. Capture all `/\ var = value` assignments
 4. Diff against previous state to identify which variables changed
 
+## 5.5. Generate State Graph
+
+After TLC finishes (whether clean or with violations), generate the state graph JSON. Use the artifact paths from `run-tlc.sh` output:
+
+```bash
+python3 "$PLUGIN_ROOT/scripts/dot-to-json.py" \
+  --dot "$ARTIFACT_DIR/states.dot" \
+  --cfg "$CFG_FILE" \
+  --tlc-output "$ARTIFACT_DIR/tlc-output.txt" \
+  --output "$ARTIFACT_DIR/state-graph.json"
+```
+
+Exit codes:
+- **0**: Success — state graph written
+- **1**: Error — DOT file couldn't be parsed. Warn and continue with text-based narrative only.
+- **2**: State graph too large (>50K states). Report to the pipeline: "The state graph has too many states for an interactive playground. Consider reducing constants or opening the `.tla` file directly in [Spectacle](https://github.com/will62794/spectacle)."
+
+If `dot-to-json.py` fails or is missing, continue with text-based violation narrative as fallback. The state graph is not required for verification — it enhances the playground.
+
 ## 6. Counterexample-to-Narrative Translation
+
+> **Note:** When the state graph is available (section 5.5), violations are presented visually in the playground. This narrative translation is the **fallback** for when the playground can't be generated (state graph too large, script failure, etc.). The pipeline orchestrator decides which presentation to use.
 
 This is the core value. TLC counterexamples are state traces — sequences of variable assignments. You must translate them into stories a domain expert would understand.
 
@@ -253,15 +303,34 @@ For each state transition (State N → State N+1):
 > 2. **[Domain action]** — [what happened and why it was allowed]
 > 3. **[Domain action]** — [what happened — THIS is where it breaks]
 >
-> **The bug:** [one sentence summary]
+> **What happened:** [one sentence summary of the scenario]
 > **Violated property:** [invariant name] — [what it means in plain English]
-> **Suggested fix:** [concrete suggestion, e.g., "Add a guard to `Release` that checks `lockHolder[resource] = node`"]
+>
+> **Is this a problem in your design, or did I write the spec wrong?**
+> - If this scenario *shouldn't* be possible: [concrete suggestion, e.g., "We could add a guard to `Release` that checks the lock holder"]
+> - If this scenario *is* expected: the invariant may need updating — tell me what the correct rule should be
+
+For liveness violations, extend the narrative with fairness analysis:
+
+> **Loop analysis:** The system cycles through states [N]→[M]→...→[N] forever.
+> **Stuck action:** [action name] — [why it should eventually fire but doesn't]
+> **Fairness diagnosis:** [one of: "needs strong fairness (action is repeatedly but not continuously enabled)", "needs weak fairness (action is continuously enabled but never taken)", or "not a fairness issue — the action is never enabled in the loop"]
+> **Suggested fix:** [e.g., "Add `SF_vars(AcquireLock)` to the Spec definition" or "Add a new action that enables progress from state X"]
 
 ### Rules
 
-- **NEVER soften violations.** Do not say "potential issue" or "edge case." Say "bug" or "violation." TLC found a real, reachable execution — it is a concrete bug.
+- **Present, don't diagnose.** TLC found a reachable scenario — but you don't know whether it's a bug in the design or a mistake in the spec. Frame violations as: "TLC found this scenario is possible in your design. Is this a real problem, or did I misunderstand your requirements?" Never auto-fix without the user's input.
+- **Distinguish spec bugs from design bugs.** A spec bug is when the TLA+ doesn't match what the user described (e.g., a missing guard they specified in the interview). A design bug is when the user's requirements genuinely allow a problematic scenario they hadn't considered. The user needs to know which they're looking at.
 - **Use specific names and values** from the trace. Use concrete entity names, not generic placeholders.
 - **For temporal (liveness) violations**, explain the loop: "The system enters a cycle where [X happens repeatedly] but [Y never happens]. This violates the property that [Y] should eventually occur."
+
+  **Fairness diagnosis for temporal violations:**
+  When a temporal property is violated, perform these additional steps:
+  1. Identify the "stuck" action — the action that the liveness property expects to eventually fire but never does in the loop.
+  2. Check whether that action is **enabled** in any state within the loop. Look at its guards against the variable values in the looping states.
+  3. If the action is enabled in some loop states but not others (it flickers on and off due to other actions), the fix is **strong fairness** (`SF_vars(ActionName)`): "The action is repeatedly possible but keeps getting preempted. Adding strong fairness for this action guarantees it eventually fires."
+  4. If the action is continuously enabled throughout the loop but never fires, the fix is **weak fairness** (`WF_vars(ActionName)`) — or check that the existing `WF_vars(Next)` covers it: "The action is always possible in this loop but never taken. Weak fairness should prevent this — check that `Spec` includes `WF_vars(Next)` or `WF_vars(ActionName)`."
+  5. If the action is never enabled in the loop, the issue is not fairness — it's a missing transition or guard problem: "The action can never fire in this cycle because [guard condition] is never satisfied. The spec may need a new action or a relaxed guard to make progress possible."
 - **For deadlocks**, explain what's stuck: "The system reaches a state where [describe state] and no action can proceed because [explain which guards block every possible action]."
 
 ## 7. Refinement Loop
@@ -292,4 +361,4 @@ After presenting a violation:
 3. **Translate everything.** The user should understand the scenario without knowing any TLA+ notation.
 4. **Suggest fixes.** After describing a violation, briefly suggest what guard or constraint might fix it.
 5. **Don't over-explain success.** A clean run gets a one-liner. Violations get the detailed narrative.
-6. **Suggest next step.** On clean result: "The spec is verified. Next: generate an interactive playground with `/tlaplus-animate`, or property-based tests with `/tlaplus-test`."
+6. **Report graph availability.** On clean result, note whether the state graph was generated successfully: "State graph written to [path]" or "State graph generation skipped — [reason]."

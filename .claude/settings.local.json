@@ -2,7 +2,14 @@
   "permissions": {
     "allow": [
       "WebSearch",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(wc:*)",
+      "Bash(head:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:will62794.github.io)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(chmod +x:*)",
+      "Bash(python3:*)"
     ]
   }
 }
