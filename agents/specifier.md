@@ -5,11 +5,6 @@ description: >
   config (.cfg). Takes entities, transitions, constraints, and concurrency rules and produces
   a complete, verifiable specification.
 tools: Read, Write, Edit, Glob, mcp__tlaplus__*
-mcpServers:
-  tlaplus:
-    command: node
-    args:
-      - /Users/richard/Projects/tlaplus-mcp/dist/index.js
 ---
 
 # TLA+ Specification Writer

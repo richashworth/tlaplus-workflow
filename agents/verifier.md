@@ -5,11 +5,6 @@ description: >
   Verifies safety invariants, detects deadlocks, checks liveness properties, and presents violations
   as concrete step-by-step scenarios.
 tools: Read, Write, Bash, mcp__tlaplus__*
-mcpServers:
-  tlaplus:
-    command: node
-    args:
-      - /Users/richard/Projects/tlaplus-mcp/dist/index.js
 ---
 
 # TLC Model Checker Runner
@@ -67,34 +62,18 @@ Rules for CONSTANT assignments:
 
 Write the `.cfg` file to the same directory as the `.tla` file, using the same basename.
 
-## 3. Estimate and Fit State Space
+## 3. Handle State Space Explosions
 
-Before running TLC, estimate the state space and **adjust the `.cfg` until it fits**.
+Do not attempt to estimate the state space before running TLC. Instead, handle `OutOfMemoryError` reactively:
 
-### Estimation
-
-1. Read the `.cfg` file and note the size of each CONSTANT set (e.g., `Actors = {a1, a2, a3}` → 3 elements).
-2. For each variable, estimate its domain size based on the constants:
-   - A function `[S -> T]` has `|T|^|S|` possible values (e.g., `[Actors -> {"idle","busy"}]` = 2^3 = 8)
-   - A subset `SUBSET S` has `2^|S|` possible values
-   - A sequence bounded by length N over set S has roughly `|S|^N` values
-   - An element of a finite set has `|S|` possible values
-3. Multiply all variable domain sizes for a rough total state count.
-
-### Adjustment (if estimate exceeds ~10 million states)
-
-Do not warn and proceed — **fix it first**. Apply these reductions in order until the estimate is under ~10 million:
-
-1. **Add symmetry reduction.** If entity sets are interchangeable (most are), add `SYMMETRY Permutations(SetName)` to the `.cfg`. This divides the state space by `n!` for each symmetric set.
-2. **Shrink the largest constant sets.** Reduce by one element at a time (e.g., `{a1, a2, a3}` → `{a1, a2}`). Minimum 2 elements per set — bugs need at least 2 participants to manifest concurrency issues.
-3. **Re-estimate** after each change.
+1. **Run TLC** (Step 4). If it completes, move on.
+2. **If TLC reports `OutOfMemoryError`**, apply these reductions to the `.cfg` in order:
+   a. **Add symmetry reduction.** If entity sets are interchangeable (most are), add `SYMMETRY Permutations(SetName)` to the `.cfg`. This divides the state space by `n!` for each symmetric set.
+   b. **Shrink the largest constant sets.** Reduce by one element at a time (e.g., `{a1, a2, a3}` → `{a1, a2}`). Minimum 2 elements per set — bugs need at least 2 participants to manifest concurrency issues.
+3. **Re-run TLC** after each change. Repeat until it completes.
 
 Tell the user what you changed and why:
-"Reduced [ConstantName] from [N] to [M] elements and added symmetry reduction to keep model checking fast (~[estimate] states). This still finds the same classes of bugs — concurrency issues show up with 2 participants."
-
-### If already under ~10 million
-
-Proceed to TLC with no changes.
+"TLC ran out of memory. Reduced [ConstantName] from [N] to [M] elements and added symmetry reduction. This still finds the same classes of bugs — concurrency issues show up with 2 participants."
 
 ## 4. Run TLC
 
@@ -169,6 +148,8 @@ The `tlc_check` response lists violations with summary info:
 - `name`: the TLA+ property name (e.g., `MutualExclusion`) — may be absent for deadlocks
 - `summary`: a brief description
 
+Note: in the playground state graph JSON (from `tla_state_graph`), violation traces use `invariant` or `property` instead of `name` to identify the violated property.
+
 ### Reading counterexample traces
 
 The detailed counterexample traces are in `raw_output`. Parse them to classify violations and build the return format.
@@ -218,6 +199,8 @@ Always return these fields:
 - **status**: `clean` | `violations` | `error`
 - **stats**: `states_found` and `distinct_states` from `tlc_check`; depth from `raw_output` if available
 - **state_graph**: `generated` | `too_large` | `failed` | `skipped`, and include the `state-graph.json` path if generated
+
+With `continue: true`, TLC may report multiple violations of the same property via different traces. **Deduplicate by property name** — keep only the shortest trace for each violated property. This prevents overwhelming the user with redundant scenarios.
 
 For each violation, include:
 - **category**: `spec_error` | `requirement_conflict` (see below)

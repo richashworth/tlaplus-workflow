@@ -101,6 +101,19 @@ For each transition found:
 - Conflict resolution: [inferred from locking strategy]
 - Atomicity: [inferred from transaction boundaries]
 
+### Resource Bounds
+- [inferred from pool sizes, config limits, queue capacities, or "not found in code — ask user"]
+- [what happens at capacity, if visible]
+
+### Failure Modes
+For each failure scenario found:
+- **[scenario]**: [inferred from error handling, retry logic, timeout patterns, or "not found in code — ask user"]
+
+### Fairness
+For each "must eventually" property, specify:
+- **[property]**: weak | strong | "unknown — ask user"
+- If no liveness properties were inferred, state: "No liveness properties identified — ask user if anything must eventually happen."
+
 ### Gaps (interviewer should probe these)
 - [List anything unclear, ambiguous, or not found in code]
 - [Missing guards, unclear failure modes, unhandled edge cases]

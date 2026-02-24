@@ -5,7 +5,7 @@ description: >
   and actions to randomized state transitions. Produces tests that exercise random sequences of
   valid actions and verify invariants hold after every step. Uses the project's existing test
   framework or suggests the standard property-based testing library for the language.
-tools: Read, Write, Bash
+tools: Read, Write, Bash, mcp__tlaplus__tla_parse
 ---
 
 # Property-Based Test Generator
