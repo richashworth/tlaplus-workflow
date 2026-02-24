@@ -56,7 +56,7 @@ An object mapping technical edge labels to domain-friendly display names. Read a
 
 Example:
 ```javascript
-const ACTION_LABELS = {
+var ACTION_LABELS = {
   "Acquire (n1: idle→holding)": "Node 1 grabs the lock",
   "Release (n1: holding→idle)": "Node 1 releases the lock",
   "Enqueue": "Request added to queue"
@@ -273,7 +273,7 @@ An object mapping TLA+ invariant/property names to one-line PM-readable descript
 
 Example:
 ```javascript
-const INVARIANT_LABELS = {
+var INVARIANT_LABELS = {
   "TypeOK": "All values stay within expected types",
   "MutualExclusion": "Two processes never hold the lock at the same time",
   "NoStarvation": "Every waiting process eventually gets served"
@@ -291,7 +291,7 @@ Each entry has:
 
 Example:
 ```javascript
-const SCENARIO_LABELS = {
+var SCENARIO_LABELS = {
   "v1": {
     "title": "Two clients grab same lock",
     "description": "Both clients acquire the lock simultaneously because the check-and-set is not atomic.",
@@ -316,7 +316,7 @@ The state graph JSON already contains algorithmically-discovered happy paths in 
 
 For each entry in `GRAPH.happyPaths`, read the trace's action sequence, understand what domain scenario it represents using the system summary, and add `title` and `description`. Keep the `trace` array unchanged.
 
-If `GRAPH.happyPaths` is empty or absent, fall back to manual discovery: read `GRAPH.transitions` and find interesting paths from the initial state, as before.
+If `GRAPH.happyPaths` is empty or absent AND `GRAPH.partial` is `true`, leave `HAPPY_PATHS` as an empty array. Only do manual discovery (traverse `GRAPH.transitions`) when `GRAPH.partial` is `false` or absent.
 
 Example:
 ```javascript

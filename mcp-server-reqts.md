@@ -131,7 +131,7 @@ These three tools are on the primary pipeline path. Every verification run uses 
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `dot_file` | string | yes | Absolute path to the `.dot` file (from `tlc_check`'s `dump_file`) |
+| `dot_file` | string | no | Absolute path to the `.dot` file (from `tlc_check`'s `dump_file`). Required when `traces_only` is `false` (default). Ignored when `traces_only` is `true`. |
 | `cfg_file` | string | no | Path to `.cfg` file — used to extract invariant/property names |
 | `tlc_output` | string | no | Raw TLC output string (from `tlc_check`'s `raw_output`) — used to extract violation traces and happy paths |
 | `tlc_output_file` | string | no | Alternative: path to a file containing TLC output |
@@ -206,7 +206,7 @@ The server finds happy paths algorithmically via BFS/DFS from the initial state:
 3. **Deduplication:** Two paths are duplicates if they visit the same sequence of actions (ignoring state IDs). Keep the shorter one.
 4. **Limit:** Return at most 5 happy paths, prioritizing shorter paths.
 
-Happy paths must not overlap with violation traces — exclude any path whose final state matches the final state of a violation trace.
+Happy paths must not overlap with violation traces — exclude any path whose final state matches the final state of a violation trace. For full graphs, matching is by state ID. For partial graphs (`partial: true`), state IDs are synthetic (`t1`, `t2`, ...) and may differ across traces for structurally identical states; use structural equality of the final state's `vars` object instead.
 
 ### 3.3.2 Traces-Only Mode (`traces_only: true`)
 
@@ -385,6 +385,10 @@ Edge labels should be human-readable and include parameter values where applicab
 ### Violation trace extraction
 
 Violation traces are extracted from TLC's counterexample output (`tlc_output` parameter) and correlated with state IDs from the DOT graph. Each violation gets a stable ID (`v1`, `v2`, ...) and its trace as an array of `{ stateId, action }` entries.
+
+For **safety** violations, the first entry's `action` is `null` (initial state) and subsequent entries carry the action label that caused the transition.
+
+For **temporal (liveness)** violations, TLC outputs a lasso-shaped counterexample. The trace must end with a sentinel entry `{ "stateId": "<loop-start-state-id>", "action": "Back to state" }` where `stateId` is the ID of the state to which the cycle loops back. The playground's `checkInvariants()` function uses this sentinel to render lasso highlighting for liveness violations.
 
 ### Happy path extraction
 

@@ -189,14 +189,6 @@ body {
   100% { background-color: transparent; outline-color: transparent; }
 }
 
-[data-var].var-changed-enter {
-  animation: varEnter 400ms ease;
-}
-
-@keyframes varEnter {
-  0%   { background-color: var(--green-bg); outline: 2px solid var(--green); outline-offset: 1px; }
-  100% { background-color: transparent; outline-color: transparent; }
-}
 
 /* ===== Action Buttons ===== */
 .actions-bar {
@@ -1057,6 +1049,7 @@ function renderTrace() {
       var entry = traceLog[idx];
       if (entry && entry.toId) {
         currentStateId = entry.toId;
+        traceLog = traceLog.slice(0, idx + 1);
         renderAll();
       }
     });
@@ -1152,7 +1145,11 @@ function renderAll() {
   // Visual view
   var visualEl = document.getElementById('prototype-visual');
   var hintHtml = '<div class="visual-hint">This is a first-pass visual \u2014 ask Claude to refine the layout, colors, or icons in your session.</div>';
-  visualEl.innerHTML = state ? hintHtml + renderStateVisual(state.vars) : fallback;
+  visualEl.innerHTML = state
+    ? hintHtml + (typeof renderStateVisual === 'function'
+        ? renderStateVisual(state.vars)
+        : '<p style="color:var(--muted);padding:1rem">Visual view not available.</p>')
+    : fallback;
 
   // Crossfade animation on the active panel
   var activeEl = activeTab === 'visual' ? visualEl : protoEl;
@@ -1177,7 +1174,8 @@ function renderAll() {
   // Track visited states
   if (currentStateId) visitedStates[currentStateId] = true;
   var visitedCount = Object.keys(visitedStates).length;
-  document.getElementById('coverage-counter').textContent = visitedCount + ' / ' + totalStates + ' states';
+  var statesLabel = GRAPH.partial ? 'traced states' : 'states';
+  document.getElementById('coverage-counter').textContent = visitedCount + ' / ' + totalStates + ' ' + statesLabel;
 
   document.getElementById('step-counter').textContent = 'Step ' + traceLog.length;
   renderActions();

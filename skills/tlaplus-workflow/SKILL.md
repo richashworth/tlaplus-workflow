@@ -258,7 +258,7 @@ Use AskUserQuestion to let the user choose a resolution. Once they decide, updat
 **Step 5.3: Handle state graph availability.** The verifier always produces a state graph when TLC runs successfully — either a full graph (`generated`) or a traces-only graph (`partial`) when the full state space is too large. Both work with the animator and playground identically.
 
 - `generated` or `partial` → proceed to Step 5.4.
-- `partial` → additionally note to the user: "The state space is large ({stats}), so the playground shows violation scenarios and key paths rather than the full graph. You can explore the full state space in [Spectacle](https://github.com/will62794/spectacle)."
+- `partial` → additionally note to the user: "The state space is large (substitute actual values from the verifier's `stats` field: `{stats.states_found}` states found, `{stats.distinct_states}` distinct), so the playground shows violation scenarios and key paths rather than the full graph. You can explore the full state space in [Spectacle](https://github.com/will62794/spectacle)."
 - `failed` or `skipped` → no playground. Present violations as text in Step 5.5. Suggest opening the `.tla` file in [Spectacle](https://github.com/will62794/spectacle).
 
 **Step 5.4: Invoke the animator agent** when the state graph is available (`generated` or `partial`). Violations are pinned as scenarios in the playground. Open the playground automatically.
@@ -287,7 +287,12 @@ Options:
 
 **If the user chooses "Fix the design":** Discuss the violations conversationally. The user may want to fix some and accept others — let them explain in their own words. For each violation they want fixed, understand whether to add a guard/constraint or relax the invariant. Then: ask the user if they'd like to commit the current spec before making changes (for easy rollback). If they agree, commit it. Then update the spec and re-run from Step 5.1. Repeat until the user is satisfied.
 
-**If clean** (no violations): one-line summary of stats, proceed to Step 6.
+**If clean** (no violations): give a one-line summary of stats (e.g., "N states found, M distinct — no violations"). Then use AskUserQuestion:
+> "What would you like to do next?"
+
+Options:
+- "Refine the visual" — the user wants to iterate on the Visual tab's appearance. Discuss what they'd like changed (layout, colors, icons, grouping) and re-invoke the animator to update `renderStateVisual`. This is a cosmetic loop — no spec or verification changes needed.
+- "Generate code" — proceed to Step 6 for scaffolding and property-based tests.
 
 ### Step 6: Offer extras
 
