@@ -238,7 +238,7 @@ This step runs TLC, generates the state graph, builds the interactive playground
 **Step 5.1: Invoke the verifier agent.** Pass it the spec files **and** the confirmed structured summary (so it can classify violations as spec errors vs requirement conflicts). It returns structured results:
 - `status`: clean | violations | error
 - `violation_count` and violation summaries (one line each), each categorized as `spec_error` or `requirement_conflict`
-- `state_graph`: generated | too_large | failed
+- `state_graph`: generated | partial | failed | skipped
 - `stats`: states found, distinct states, depth
 
 **Step 5.2: Handle verifier results by category.** The verifier classifies each violation as either a `spec_error` or a `requirement_conflict`:
@@ -255,9 +255,13 @@ Use AskUserQuestion to let the user choose a resolution. Once they decide, updat
 
 **SANY errors** (syntax/parse errors, not violations): Don't surface to the user. Route to the specifier agent to fix silently. Re-verify. Escalate after 2 failed attempts.
 
-**Step 5.3: Handle state graph too large.** If the verifier reports `state_graph: too_large`, tell the user the state space is too large for an interactive playground. Suggest reducing constants or opening the `.tla` file in [Spectacle](https://github.com/will62794/spectacle). Skip to Step 5.5 (text-only violation presentation).
+**Step 5.3: Handle state graph availability.** The verifier always produces a state graph when TLC runs successfully — either a full graph (`generated`) or a traces-only graph (`partial`) when the full state space is too large. Both work with the animator and playground identically.
 
-**Step 5.4: Invoke the animator agent — ALWAYS**, whether violations exist or not. Violations are pinned as scenarios in the playground. Open the playground automatically. Only skip this step if Step 5.3 applied.
+- `generated` or `partial` → proceed to Step 5.4.
+- `partial` → additionally note to the user: "The state space is large ({stats}), so the playground shows violation scenarios and key paths rather than the full graph. You can explore the full state space in [Spectacle](https://github.com/will62794/spectacle)."
+- `failed` or `skipped` → no playground. Present violations as text in Step 5.5. Suggest opening the `.tla` file in [Spectacle](https://github.com/will62794/spectacle).
+
+**Step 5.4: Invoke the animator agent** when the state graph is available (`generated` or `partial`). Violations are pinned as scenarios in the playground. Open the playground automatically.
 
 **Step 5.5: Present results and get user input.**
 

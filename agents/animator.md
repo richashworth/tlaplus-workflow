@@ -24,6 +24,7 @@ The JSON has this structure:
 ```json
 {
   "initialStateId": "1",
+  "partial": false,
   "states": {
     "1": { "label": "/\\ x = 0 ...", "vars": {"x": 0, "y": "idle"} }
   },
@@ -33,14 +34,17 @@ The JSON has this structure:
     ]
   },
   "invariants": ["TypeOK", "MutualExclusion"],
-  "violations": [...]
+  "violations": [...],
+  "happyPaths": [...]
 }
 ```
 
+- `partial` — `false` for a full state graph, `true` when built from traces only (large state spaces). The playground works identically in both cases.
 - `states[id].vars` — the parsed state variables (JS-native types: objects, arrays, numbers, strings, booleans)
 - `transitions[id]` — available edges from each state, with action names and targets
 - `invariants` — names of properties being checked
 - `violations` — traces of invariant/property violations with stable IDs (v1, v2, ...)
+- `happyPaths` — algorithmically-discovered successful execution paths (traces only, no titles). You add creative metadata (title, description) in the `HAPPY_PATHS` section.
 
 ## What You Generate
 
@@ -305,18 +309,18 @@ const SCENARIO_LABELS = {
 
 An array of happy-path traces — representative paths through the state graph that show the system working correctly. These appear in the scenario dropdown alongside bug traces so users can walk through normal behavior, not just failures.
 
-To build these: read the state graph's `transitions` and find interesting paths from the initial state. Good candidates:
-- Paths to terminal states (states with no outgoing transitions) — these show a completed execution
-- If no terminal states exist (the system loops), pick a representative path that exercises the main actions
+The state graph JSON already contains algorithmically-discovered happy paths in `GRAPH.happyPaths` — each with a `trace` array of `{stateId, action}` entries. Your job is to add the **creative metadata** that makes each path meaningful to the user:
 
-Each entry has:
-- `title` (string, <60 chars): short domain-language name for the dropdown (e.g., "Lock acquired and released")
-- `description` (string): 1-2 sentence explanation of what this path demonstrates
-- `trace` (array): sequence of `{stateId, action}` entries tracing the path through the graph. The first entry's `action` should be `null` (initial state).
+- `title` (string, <60 chars): short domain-language name for the dropdown. Read the trace actions and describe the scenario in terms the user understands (e.g., "Lock acquired and released", "Order placed and fulfilled").
+- `description` (string): 1-2 sentence explanation of what this path demonstrates and why it matters.
+
+For each entry in `GRAPH.happyPaths`, read the trace's action sequence, understand what domain scenario it represents using the system summary, and add `title` and `description`. Keep the `trace` array unchanged.
+
+If `GRAPH.happyPaths` is empty or absent, fall back to manual discovery: read `GRAPH.transitions` and find interesting paths from the initial state, as before.
 
 Example:
 ```javascript
-const HAPPY_PATHS = [
+var HAPPY_PATHS = [
   {
     "title": "Single client acquires and releases lock",
     "description": "One client successfully acquires the lock, does its work, and releases it.",
@@ -329,7 +333,7 @@ const HAPPY_PATHS = [
 ];
 ```
 
-Include at least one happy path. If the spec has multiple meaningfully different successful flows, include one for each (up to ~3).
+Include all paths from `GRAPH.happyPaths` (up to 5). If the graph provides more than 5, pick the ones that best represent distinct use cases.
 
 ### 6. `DOMAIN_STYLES`
 

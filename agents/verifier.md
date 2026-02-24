@@ -135,10 +135,24 @@ If `dump_file` is present in the response, call the `tla_state_graph` MCP tool:
 Save the resulting JSON to `<artifact_dir>/state-graph.json` using the Write tool.
 
 Determine `state_graph_status`:
-- Successful response → `generated`
-- Response contains `too_large: true` → `too_large`
+- Successful response (full graph) → `generated`
+- Successful response with `partial: true` → `partial`
 - Parse error → `failed`
 - No `dump_file` in `tlc_check` response (TLC errored before dumping) → `skipped`
+
+### Handle too-large graphs
+
+If the response contains `too_large: true`, **re-call `tla_state_graph`** with `traces_only: true` added to the parameters. This builds a minimal graph from just the violation traces and happy paths in the TLC output, skipping the full DOT parse. The resulting JSON has the same shape as a full graph — the playground works identically — but only contains the states along traced paths (typically 10-30 states).
+
+| Parameter | Value |
+|---|---|
+| `dot_file` | the `dump_file` path from `tlc_check` |
+| `cfg_file` | the `.cfg` file path |
+| `tlc_output` | the `raw_output` string from `tlc_check` |
+| `format` | `"playground"` |
+| `traces_only` | `true` |
+
+If the retry succeeds, save the JSON and report `state_graph: partial`. If it also fails, report `state_graph: failed`.
 
 ## 5. Interpret Violations
 
@@ -198,7 +212,7 @@ Always return these fields:
 
 - **status**: `clean` | `violations` | `error`
 - **stats**: `states_found` and `distinct_states` from `tlc_check`; depth from `raw_output` if available
-- **state_graph**: `generated` | `too_large` | `failed` | `skipped`, and include the `state-graph.json` path if generated
+- **state_graph**: `generated` | `partial` | `failed` | `skipped`, and include the `state-graph.json` path if generated or partial
 
 With `continue: true`, TLC may report multiple violations of the same property via different traces. **Deduplicate by property name** — keep only the shortest trace for each violated property. This prevents overwhelming the user with redundant scenarios.
 
@@ -279,7 +293,7 @@ state_graph: generated (specs/LockManager/state-graph.json)
 
 ### Fallback narrative
 
-Only produce the full narrative translation below when you report `state_graph: failed` or `state_graph: too_large`. When the state graph is available, the playground handles visualization — return summaries only.
+Only produce the full narrative translation below when you report `state_graph: failed` or `state_graph: skipped`. When the state graph is available — whether `generated` or `partial` — the playground handles visualization, so return summaries only.
 
 #### Narrative translation protocol (fallback only)
 
