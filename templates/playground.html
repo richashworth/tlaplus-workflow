@@ -859,9 +859,8 @@ body {
   line-height: 1.5;
 }
 
-/* === GENERATED: DOMAIN_STYLES === */
-/* === END GENERATED === */
 </style>
+<link rel="stylesheet" href="playground-gen.css">
 </head>
 <body>
 
@@ -946,43 +945,10 @@ body {
 <!-- Toast Notification -->
 <div class="toast" id="toast"></div>
 
+<!-- Generated data — loaded from sibling file, never inline in the template -->
+<script src="playground-gen.js"></script>
+
 <script>
-// =====================================================================
-// GENERATED PIECES — Animator replaces these blocks
-// =====================================================================
-
-// === GENERATED: GRAPH ===
-const GRAPH = {"initialStateId":null,"states":{},"transitions":{},"invariants":[],"violations":[]};
-// === END GENERATED ===
-
-// === GENERATED: ACTION_LABELS ===
-const ACTION_LABELS = {};
-// === END GENERATED ===
-
-// === GENERATED: INVARIANT_LABELS ===
-const INVARIANT_LABELS = {};
-// === END GENERATED ===
-
-// === GENERATED: SCENARIO_LABELS ===
-const SCENARIO_LABELS = {};
-// === END GENERATED ===
-
-// === GENERATED: HAPPY_PATHS ===
-const HAPPY_PATHS = [];
-// === END GENERATED ===
-
-// === GENERATED: renderState ===
-function renderState(vars) {
-  return '<p style="color:var(--text-3);padding:40px;text-align:center;">No prototype renderer loaded.</p>';
-}
-// === END GENERATED ===
-
-// === GENERATED: renderStateVisual ===
-function renderStateVisual(vars) {
-  return '<p style="color:var(--text-3);padding:40px;text-align:center;">No visual renderer loaded.</p>';
-}
-// === END GENERATED ===
-
 // =====================================================================
 // State Engine (graph-walking)
 // =====================================================================
@@ -1459,6 +1425,12 @@ function toggleTheme() {
 // =====================================================================
 // Boot
 // =====================================================================
+
+// Set title from generated data
+if (typeof PLAYGROUND_TITLE !== 'undefined') {
+  document.title = PLAYGROUND_TITLE;
+  document.getElementById('page-title').textContent = PLAYGROUND_TITLE;
+}
 
 initScenarios();
 renderAll();
