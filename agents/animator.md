@@ -87,7 +87,7 @@ The `vars` object has the same shape as the JSON in `states[id].vars`.
 - **Represent state as data, not as pictures.** You are building a dashboard, not a diagram. A traffic intersection should be a table of light states per direction and a list of waiting cars — NOT an ASCII/HTML drawing of roads with cars positioned on them. A distributed system should be entity rows with status badges — NOT boxes with arrows drawn between them. The prototype panel is a narrow scrolling column; spatial simulations don't fit and always break.
 - **Use only normal document flow.** Build layouts with the template's utility classes (`.rs-card`, `.rs-grid-2`, `.rs-table`, etc.) which use flexbox and CSS grid. These stack and wrap predictably at every viewport size.
 - **NEVER use `position: absolute` or `position: fixed`** in renderState output. These cause elements to overlap and break at different state sizes.
-- **NEVER use CSS `transform`** — no `rotate()`, `translate()`, `scale()`, or any transform. Rotated elements render upside-down, overlap neighbors, and clip outside their containers. There is no valid use of transform in renderState.
+- **NEVER use CSS `transform`** — no `rotate()`, `translate()`, `scale()`, or any transform. This includes rotating emoji or icons to indicate direction (e.g., rotating a 🚗 90° to face east, or flipping an arrow upside-down). Rotated elements render sideways or upside-down and look broken. Instead, use directional Unicode arrows (`←` `→` `↑` `↓`) or text labels ("northbound") which are always upright and legible.
 - **NEVER use negative margins** to pull elements out of their natural position. This creates overlapping content.
 - **NEVER build spatial/geographic layouts** (grids of positioned elements meant to represent physical locations, road maps, floor plans, circuit diagrams). These always break. Instead, represent the same information as a table or entity list — one row per actor/location, columns for state.
 - **NEVER use hardcoded pixel widths** wider than 300px on any single element. The prototype panel varies in size. Use percentages, `fr` units via `.rs-grid`, or `auto`.
@@ -228,9 +228,13 @@ Given vars: `{ lights: {north: "red", south: "red", east: "green", west: "green"
 
 **WRONG** — do not draw a spatial intersection with positioned/rotated cars:
 ```javascript
-// BAD: positioned divs, rotated elements, spatial layout — NEVER do this
+// BAD: spatial layout with positioned elements — NEVER do this
 '<div style="position:relative;width:400px;height:400px">' +
 '<div style="position:absolute;top:0;left:180px;transform:rotate(180deg)">🚗</div>' + ...
+
+// BAD: rotating emoji to indicate direction — cars render upside-down/sideways
+'<span style="transform:rotate(90deg);display:inline-block">🚗</span>' +  // appears sideways
+'<span style="transform:rotate(270deg);display:inline-block">🚗</span>' + // appears upside-down
 ```
 
 **RIGHT** — render as a data dashboard:
