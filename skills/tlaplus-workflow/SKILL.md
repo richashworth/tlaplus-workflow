@@ -226,7 +226,7 @@ Invoke the **specifier** agent. Pass it the confirmed system summary and the **s
 
 Tell the user what was created (file paths) and give a one-line summary of the module scope (e.g., "3 entities, 5 actions, 2 safety invariants, 1 liveness property"). Then ask what they'd like to do next:
 
-- **Walk me through the spec** — summarize the spec in plain language: what the entities are, what transitions exist, what properties are checked, and why. No TLA+ syntax — just the domain story.
+- **Walk me through the spec** — summarize the spec in plain language: what the entities are, what transitions exist, what properties are checked, and why. No TLA+ syntax — just the domain story. After the walkthrough, re-present this same choice so the user can proceed.
 - **Explore it** — run TLC model checking and build an interactive playground to explore the design (Step 5).
 
 Wait for the user's choice before proceeding.
@@ -280,7 +280,7 @@ Options:
 - "Explore in the playground" — re-open the playground and guide the user to the Scenarios panel (e.g., "Select a scenario from the dropdown, then use **Next Step** or **Play All** to walk through it"). After the user has explored, re-ask this same question.
 - "Continue anyway" — the user considers the violations acceptable. Note which violations are being accepted, then proceed to Step 6 normally.
 
-**If the user chooses "Fix the design":** Discuss the violations conversationally. The user may want to fix some and accept others — let them explain in their own words. For each violation they want fixed, understand whether to add a guard/constraint or relax the invariant. Then: commit current spec for rollback (`git add <spec_dir>/<ModuleName>.tla <spec_dir>/<ModuleName>.cfg && git commit -m "tlaplus: pre-refinement"`), update the spec, re-run from Step 5.1. Repeat until the user is satisfied.
+**If the user chooses "Fix the design":** Discuss the violations conversationally. The user may want to fix some and accept others — let them explain in their own words. For each violation they want fixed, understand whether to add a guard/constraint or relax the invariant. Then: ask the user if they'd like to commit the current spec before making changes (for easy rollback). If they agree, commit it. Then update the spec and re-run from Step 5.1. Repeat until the user is satisfied.
 
 **If clean** (no violations): one-line summary of stats, proceed to Step 6.
 

@@ -4,7 +4,7 @@ description: >
   Generates interactive HTML playgrounds from pre-computed TLA+ state graphs. Creates visual,
   domain-specific prototypes where users explore state transitions by walking the verified state
   graph. Reads the state graph JSON and system summary to produce a themed, self-contained HTML file.
-tools: Read, Write, Bash
+tools: Read, Write, Bash, Glob
 ---
 
 # Interactive Playground Generator
@@ -145,14 +145,15 @@ Additional CSS that themes the playground to the domain. The template uses CSS c
 The playground template lives at `templates/playground.html` (relative to the plugin root). To produce the output:
 
 1. Read the template file
-2. Read the state graph JSON file
-3. For each piece, find the corresponding marker block:
+2. Verify all marker blocks exist (`// === GENERATED: GRAPH ===` through `// === END GENERATED ===` for each piece). If any marker is missing, stop and report the problem — do not write a broken file.
+3. Read the state graph JSON file
+4. For each piece, find the corresponding marker block:
    ```
    // === GENERATED: GRAPH ===
    const GRAPH = {...};
    // === END GENERATED ===
    ```
-4. Replace the content between markers:
+5. Replace the content between markers:
    - **GRAPH**: Inject the entire state-graph.json contents as `const GRAPH = <json>;`
    - **ACTION_LABELS**: Inject your generated label mapping
    - **INVARIANT_LABELS**: Inject your generated invariant descriptions
@@ -160,8 +161,8 @@ The playground template lives at `templates/playground.html` (relative to the pl
    - **HAPPY_PATHS**: Inject your generated happy-path traces array
    - **renderState**: Inject your generated function
    - **DOMAIN_STYLES**: Inject your generated CSS (in the `<style>` block)
-5. Update the page `<title>` to match the domain
-6. Write the merged result to `<spec_dir>/<ModuleName>/playground.html`
+6. Update the page `<title>` to match the domain
+7. Write the merged result to `<spec_dir>/<ModuleName>/playground.html`
 
 ## Theming Guidelines
 
