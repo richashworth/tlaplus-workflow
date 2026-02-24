@@ -31,23 +31,23 @@ You drive the complete pipeline from system description to verified specificatio
    Options:
    - "Looks good — continue" — proceed to Phase 3
    - "Some corrections" — the user provides corrections in their answer; apply them and re-present
-   - "Start the interview from scratch" — ignore extractor findings and begin at Phase 1
-3. Skip to **Phase 3 (Constraints)** — the extractor covers Phases 1-2.
+   - "Start the interview from scratch" — ignore extractor findings and begin at Entities and Relationships
+3. Skip to **Constraints** — the extractor covers Entities and Relationships and States and Transitions.
 
 **If `$ARGUMENTS` is a structured summary** (contains the `## System:` header and the required sections):
 Validate it (see Pipeline Step 0) and skip directly to the **Pipeline**.
 
 **If `$ARGUMENTS` is other context** (a system description, requirements, etc.):
-Use it as initial context and start from Phase 1.
+Use it as initial context and start from Entities and Relationships.
 
 **If no arguments:**
-Start from scratch at Phase 1.
+Start from scratch at Entities and Relationships.
 
 ## Interview Phases
 
 Work through these phases in order. Don't rush — each phase should feel complete before moving on. Revisit earlier phases when later questions reveal gaps.
 
-### Phase 1: Entities and Relationships
+### Entities and Relationships
 
 Find the things in the system.
 
@@ -60,14 +60,14 @@ Ask:
 Capture for each entity: name, whether it's a resource (finite, shared) or an actor (initiates actions), quantity bounds.
 
 **Gate:** Present what you've captured as a table or list. Use AskUserQuestion:
-> "**Phase 1: Entities** — here's what I have so far: [list]. Is this complete?"
+> "**Entities and Relationships** — here's what I have so far: [list]. Is this complete?"
 
 Options:
-- "Looks complete — next phase" — proceed to Phase 2
+- "Looks complete — next phase" — proceed to States and Transitions
 - "Need to add/change something" — the user provides additions or corrections; update and re-present
 - "Not sure yet — ask me more" — continue probing with follow-up questions, then re-present
 
-### Phase 2: States and Transitions
+### States and Transitions
 
 Find what states each entity can be in and what moves it between them.
 
@@ -80,14 +80,14 @@ Ask:
 Capture for each entity: enumerated states, initial state, every transition as (from_state, trigger, to_state).
 
 **Gate:** Present a state machine summary for each entity (states + transitions). Use AskUserQuestion:
-> "**Phase 2: States & Transitions** — here's the state machine for each entity: [summary]. Is this complete?"
+> "**States and Transitions** — here's the state machine for each entity: [summary]. Is this complete?"
 
 Options:
-- "Looks complete — next phase" — proceed to Phase 3
+- "Looks complete — next phase" — proceed to Constraints
 - "Need to add/change something" — the user provides additions or corrections; update and re-present
 - "Not sure yet — ask me more" — continue probing with follow-up questions, then re-present
 
-### Phase 3: Constraints
+### Constraints
 
 Find what should never happen and what must always be true.
 
@@ -102,14 +102,14 @@ Ask:
 Capture: every "should never" statement, every "must always" statement, every "must eventually" statement, every resource bound.
 
 **Gate:** Present the rules in three groups (never / always / eventually). Use AskUserQuestion:
-> "**Phase 3: Constraints** — here are the rules I've captured: [list by group]. Is this complete?"
+> "**Constraints** — here are the rules I've captured: [list by group]. Is this complete?"
 
 Options:
-- "Looks complete — next phase" — proceed to Phase 4
+- "Looks complete — next phase" — proceed to Concurrency
 - "Need to add/change something" — the user provides additions or corrections; update and re-present
 - "Not sure yet — ask me more" — continue probing with follow-up questions, then re-present
 
-### Phase 4: Concurrency
+### Concurrency
 
 Find what can happen simultaneously and what conflicts arise.
 
@@ -122,14 +122,14 @@ Ask:
 Capture: which actors can act simultaneously, conflict resolution rules, atomicity requirements.
 
 **Gate:** Present the concurrency model. Use AskUserQuestion:
-> "**Phase 4: Concurrency** — here's how simultaneous actions work: [summary]. Is this right?"
+> "**Concurrency** — here's how simultaneous actions work: [summary]. Is this right?"
 
 Options:
-- "Looks right — next phase" — proceed to Phase 5
+- "Looks right — next phase" — proceed to Edge Cases and Failure Modes
 - "Need to add/change something" — the user provides additions or corrections; update and re-present
 - "Not sure yet — ask me more" — continue probing with follow-up questions, then re-present
 
-### Phase 5: Edge Cases and Failure Modes
+### Edge Cases and Failure Modes
 
 Probe for gaps. Be adversarial. This is where real bugs hide.
 
@@ -147,7 +147,7 @@ Use these patterns — substitute actual entities/states/actions from earlier ph
 Don't accept vague answers. If the user says "it should handle that gracefully," ask: "What does gracefully mean here specifically — does the action fail, retry, or roll back?"
 
 **Gate:** Present the edge cases and failure modes captured. Use AskUserQuestion:
-> "**Phase 5: Edge Cases** — here are the failure scenarios and edge cases: [list]. Any others?"
+> "**Edge Cases and Failure Modes** — here are the failure scenarios and edge cases: [list]. Any others?"
 
 Options:
 - "That covers it — move to summary" — proceed to Completeness Checklist
@@ -229,7 +229,7 @@ Present the summary to the user. Use AskUserQuestion:
 Options:
 - "Looks good — generate the spec" — proceed to the Pipeline
 - "Some corrections" — the user provides corrections; update the summary and re-present
-- "Go back to phase [N]" — reopen the specified interview phase
+- "Go back to [phase]" — reopen the specified interview phase
 
 Once confirmed, proceed directly to the Pipeline — do not ask "would you like me to continue?".
 
