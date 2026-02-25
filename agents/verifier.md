@@ -123,14 +123,15 @@ Deadlock checking is enabled by default. Pass `deadlock: false` only if the spec
 
 ### Generate playground state graph
 
-If `dump_file` is present in the response, call the `tla_state_graph` MCP tool:
+If `dump_file` is present in the response, call the `tla_state_graph` MCP tool. If `distinct_states` exceeds 100,000, skip the full DOT parse and request traces only — the playground works identically on partial graphs.
 
 | Parameter | Value |
 |---|---|
-| `dot_file` | the `dump_file` path from `tlc_check` |
+| `dot_file` | the `dump_file` path from `tlc_check` (omit if `traces_only`) |
 | `cfg_file` | the `.cfg` file path |
 | `tlc_output` | the `raw_output` string from `tlc_check` |
 | `format` | `"playground"` |
+| `traces_only` | `true` if `distinct_states` > 100,000, omit otherwise |
 
 Save the resulting JSON to `<artifact_dir>/state-graph.json` using the Write tool.
 
@@ -139,20 +140,6 @@ Determine `state_graph_status`:
 - Successful response with `partial: true` → `partial`
 - Parse error → `failed`
 - No `dump_file` in `tlc_check` response (TLC errored before dumping) → `skipped`
-
-### Handle too-large graphs
-
-If the response contains `too_large: true`, **re-call `tla_state_graph`** with `traces_only: true` added to the parameters. This builds a minimal graph from just the violation traces and happy paths in the TLC output, skipping the full DOT parse. The resulting JSON has the same shape as a full graph — the playground works identically — but only contains the states along traced paths (typically 10-30 states).
-
-| Parameter | Value |
-|---|---|
-| `dot_file` | the `dump_file` path from `tlc_check` |
-| `cfg_file` | the `.cfg` file path |
-| `tlc_output` | the `raw_output` string from `tlc_check` |
-| `format` | `"playground"` |
-| `traces_only` | `true` |
-
-If the retry succeeds, save the JSON and report `state_graph: partial`. If it also fails, report `state_graph: failed`.
 
 ## 5. Interpret Violations
 

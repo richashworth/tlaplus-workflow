@@ -29,7 +29,7 @@ These three tools are on the primary pipeline path. Every verification run uses 
 
 ### 3.1 `tla_parse` — SANY Syntax Check
 
-**Used by:** specifier agent (after writing `.tla`), verifier agent (pre-check before TLC)
+**Used by:** specifier agent (after writing `.tla`), verifier agent (pre-check before TLC), test-writer agent (reading spec structure)
 
 **Purpose:** Fast syntax validation via SANY. Does not run TLC.
 
@@ -168,7 +168,8 @@ These three tools are on the primary pipeline path. Every verification run uses 
     {
       "id": "v1",
       "type": "invariant",
-      "name": "MutualExclusion",
+      "invariant": "MutualExclusion",
+      "summary": "MutualExclusion violated",
       "trace": [
         { "stateId": "1", "action": null },
         { "stateId": "3", "action": "Acquire" },
@@ -192,7 +193,7 @@ These three tools are on the primary pipeline path. Every verification run uses 
 - `states[id].vars` must contain **parsed** variable values as native JSON types (numbers, strings, booleans, objects, arrays) — not raw TLA+ syntax strings. The animator's `renderState(vars)` function directly accesses these as JavaScript values.
 - `transitions[id]` is an array of edges from each state, with `action` (the TLA+ action name), `label` (human-readable transition description including parameter values), and `target` (destination state ID).
 - `invariants` is the list of property names being checked (from the `.cfg`).
-- `violations` must have stable IDs (`v1`, `v2`, ...) — the animator maps these to scenario labels.
+- `violations` must have stable IDs (`v1`, `v2`, ...) — the animator maps these to scenario labels. Each violation has `type` (`"invariant"`, `"deadlock"`, or `"temporal"`), `summary` (brief description), and the violated property name in a type-specific field: `invariant` for safety violations, `property` for temporal violations, absent for deadlocks.
 - Each violation `trace` is an ordered array of `{ stateId, action }` entries. The first entry's `action` is `null` (initial state).
 - `partial` is `false` for a full graph, `true` when built in `traces_only` mode. The animator and playground work identically in both cases — the only difference is that a partial graph doesn't support free exploration beyond the traced paths.
 - `happyPaths` contains algorithmically-discovered paths through the graph that represent successful (non-violating) executions. Each entry has a `trace` array in the same format as violation traces. The animator adds creative titles and descriptions; the server provides the raw paths. See section 3.3.1 for the discovery algorithm.
@@ -220,13 +221,14 @@ When the full DOT graph is too large to parse, the server can build a minimal pl
 
 The resulting JSON has the same shape as a full graph — `states`, `transitions`, `violations`, `happyPaths`, `invariants` — just with fewer states (typically 10-30 instead of thousands/millions). The playground template and animator work identically on partial graphs.
 
-### 3.3.3 Too-Large Handling Summary
+### 3.3.3 Large State Space Handling
 
-| DOT size | `traces_only` | Behavior |
-|----------|--------------|----------|
-| ≤ 100K states | `false` (default) | Parse full graph, include happy paths and violations |
-| > 100K states | `false` | Return `too_large: true` — verifier should retry with `traces_only: true` |
-| Any size | `true` | Skip DOT, build minimal graph from `tlc_output` text, return `partial: true` |
+The **verifier** decides whether to request a full graph or traces-only based on `distinct_states` from `tlc_check` — the server does not need to detect or signal large graphs.
+
+| `distinct_states` | Verifier passes | Server behavior |
+|-------------------|----------------|-----------------|
+| ≤ 100K | `traces_only` omitted or `false` | Parse full DOT graph, include happy paths and violations |
+| > 100K | `traces_only: true` | Skip DOT, build minimal graph from `tlc_output` text, return `partial: true` |
 
 ---
 
@@ -413,7 +415,7 @@ Edge labels should be human-readable and include parameter values where applicab
 
 ### Violation trace extraction
 
-Violation traces are extracted from TLC's counterexample output (`tlc_output` parameter) and correlated with state IDs from the DOT graph. Each violation gets a stable ID (`v1`, `v2`, ...) and its trace as an array of `{ stateId, action }` entries.
+Violation traces are extracted from TLC's counterexample output (`tlc_output` parameter) and correlated with state IDs from the DOT graph. Each violation gets a stable ID (`v1`, `v2`, ...) and its trace as an array of `{ stateId, action }` entries. The violated property name is stored in a type-specific field: `invariant` for safety violations, `property` for temporal violations, absent for deadlocks (see section 3.3 return shape).
 
 For **safety** violations, the first entry's `action` is `null` (initial state) and subsequent entries carry the action label that caused the transition.
 
@@ -421,7 +423,7 @@ For **temporal (liveness)** violations, TLC outputs a lasso-shaped counterexampl
 
 ### Happy path extraction
 
-Happy paths are discovered algorithmically from the state graph (see section 3.3.1). Each entry has a `trace` array in the same `{ stateId, action }` format. Unlike violations, happy paths have no `id`, `type`, or `name` — the animator adds the creative metadata (title, description). In `traces_only` mode, happy paths are extracted from non-violating prefixes in the TLC output (see section 3.3.2).
+Happy paths are discovered algorithmically from the state graph (see section 3.3.1). Each entry has a `trace` array in the same `{ stateId, action }` format. Unlike violations, happy paths have no `id`, `type`, `invariant`, or `property` — the animator adds the creative metadata (title, description). In `traces_only` mode, happy paths are extracted from non-violating prefixes in the TLC output (see section 3.3.2).
 
 ---
 
@@ -465,7 +467,7 @@ The `dump_path` parameter in `tlc_check` tells TLC where to write the DOT file. 
 - Always include `raw_output` even on error — the verifier needs it for diagnostics.
 
 ### State graph errors (`tla_state_graph`)
-- If the DOT file is too large to parse into the playground format (> 100K states), return `too_large: true`. The verifier will retry with `traces_only: true` to build a partial graph.
+- The verifier decides whether to request a full graph or `traces_only` based on `distinct_states` from `tlc_check` (see section 3.3.3). The server does not need to detect or signal large graphs.
 - In `traces_only` mode, the DOT file is not parsed — the server works from `tlc_output` only. Failures to parse the DOT should not prevent traces-only mode from succeeding.
 - If parsing fails (in either mode), return an error rather than a malformed graph.
 
