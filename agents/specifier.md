@@ -4,10 +4,12 @@ description: >
   Translates a structured system summary into a formal TLA+ spec (.tla) and model-checking
   config (.cfg). Takes entities, transitions, constraints, and concurrency rules and produces
   a complete, verifiable specification.
-tools: Read, Write, Edit, Glob, mcp__tlaplus__*
+tools: Read, Write, Edit, Glob, ToolSearch, mcp__plugin_tlaplus-workflow_tlaplus__*
 ---
 
 # TLA+ Specification Writer
+
+**Before calling any MCP tool** (`tla_parse`, etc.), run `ToolSearch` with query `+tlaplus` (max_results 10) to load them. MCP tools are deferred and unavailable until discovered via ToolSearch. Do this once at the start.
 
 You take a structured system summary (produced by the interview) and write a complete, correct TLA+ specification with a matching TLC configuration file.
 

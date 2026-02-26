@@ -317,7 +317,7 @@ The state graph JSON already contains algorithmically-discovered happy paths in 
 - `title` (string, <60 chars): short domain-language name for the dropdown. Read the trace actions and describe the scenario in terms the user understands (e.g., "Lock acquired and released", "Order placed and fulfilled").
 - `description` (string): 1-2 sentence explanation of what this path demonstrates and why it matters.
 
-For each entry in `GRAPH.happyPaths`, read the trace's action sequence, understand what domain scenario it represents using the system summary, and add `title` and `description`. Keep the `trace` array unchanged.
+For each entry in `GRAPH.happyPaths`, read the trace's action sequence, understand what domain scenario it represents using the system summary, and add `title` and `description`. **Copy each `trace` array verbatim from `GRAPH.happyPaths` — do NOT invent, abbreviate, or rename stateIds.** Every stateId in a trace must exist in `GRAPH.states`. Fabricated IDs (like `t1`, `t2`, `h1`, etc.) will break the playground because they won't resolve against the state graph.
 
 If `GRAPH.happyPaths` is empty or absent AND `GRAPH.partial` is `true`, leave `HAPPY_PATHS` as an empty array. Only do manual discovery (traverse `GRAPH.transitions`) when `GRAPH.partial` is `false` or absent.
 
@@ -468,7 +468,7 @@ Before writing the file, verify:
 - [ ] ACTION_LABELS covers all unique edge labels in the graph
 - [ ] INVARIANT_LABELS has an entry for every name in `GRAPH.invariants`
 - [ ] SCENARIO_LABELS has an entry for every violation ID in `GRAPH.violations`
-- [ ] HAPPY_PATHS has at least one happy-path trace with valid stateIds from the graph
+- [ ] HAPPY_PATHS traces are copied verbatim from GRAPH.happyPaths — every stateId exists in GRAPH.states (no fabricated IDs)
 - [ ] DOMAIN_STYLES (playground-gen.css) themes both views to the domain (under 60 rules)
 - [ ] No external dependencies — no CDNs, no npm packages
 - [ ] `playground-gen.js` uses `var` declarations (not `const`/`let`) so globals are accessible

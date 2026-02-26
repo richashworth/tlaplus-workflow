@@ -324,14 +324,18 @@ Use AskUserQuestion to let the user choose a resolution. Once they decide, updat
 - `partial` → additionally note to the user: "The state space is large (substitute actual values from the verifier's `stats` field: `{stats.states_found}` states found, `{stats.distinct_states}` distinct), so the playground shows violation scenarios and key paths rather than the full graph. You can explore the full state space in [Spectacle](https://github.com/will62794/spectacle)."
 - `failed` or `skipped` → no playground. Present violations as text in Step 5.5. Suggest opening the `.tla` file in [Spectacle](https://github.com/will62794/spectacle).
 
-**Step 5.4: Invoke the animator agent** when the state graph is available (`generated` or `partial`). Violations are pinned as scenarios in the playground. After the animator finishes:
+**Step 5.4: Invoke the animator agent** when the state graph is available (`generated` or `partial`). First, verify `<spec_dir>/<ModuleName>/state-graph.json` exists. If the verifier did not write it, take the `tla_state_graph` JSON response and write it yourself before invoking the animator.
 
-1. **Validate the generated JS.** Read `<spec_dir>/<ModuleName>/playground/playground-gen.js` and verify it contains the required globals (`GRAPH`, `ACTION_LABELS`, `INVARIANT_LABELS`, `SCENARIO_LABELS`, `HAPPY_PATHS`, `renderState`). If the file has obvious syntax issues (mismatched braces, unterminated strings) or is missing required globals, re-invoke the animator to fix it before proceeding.
+Violations are pinned as scenarios in the playground. After the animator finishes:
+
+1. **Validate the generated JS.** Read `<spec_dir>/<ModuleName>/playground/playground-gen.js` and verify it contains the required globals (`GRAPH`, `ACTION_LABELS`, `INVARIANT_LABELS`, `SCENARIO_LABELS`, `HAPPY_PATHS`, `renderState`). Also verify that every `stateId` in each `HAPPY_PATHS` trace entry exists as a key in `GRAPH.states` — fabricated IDs (like `t1`, `h1`) are a known failure mode. If the file has issues, re-invoke the animator to fix it before proceeding.
 2. Call the `playground_init` MCP tool with `target_dir` set to `<spec_dir>/<ModuleName>/playground/`. This copies the HTML template into place deterministically.
 3. Open the playground in the browser using the `html_path` returned by `playground_init`:
 ```bash
 open <html_path>
 ```
+
+If `playground_init` fails or returns an error, tell the user: "I couldn't set up the playground — the spec and verification results are still valid. You can explore the state graph in [Spectacle](https://github.com/will62794/spectacle) instead." Do not retry more than once.
 
 **Step 5.5: Present results and get user input.**
 

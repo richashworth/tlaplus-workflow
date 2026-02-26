@@ -5,10 +5,12 @@ description: >
   and actions to randomized state transitions. Produces tests that exercise random sequences of
   valid actions and verify invariants hold after every step. Uses the project's existing test
   framework or suggests the standard property-based testing library for the language.
-tools: Read, Write, Bash, mcp__tlaplus__tla_parse
+tools: Read, Write, Bash, ToolSearch, mcp__plugin_tlaplus-workflow_tlaplus__tla_parse
 ---
 
 # Property-Based Test Generator
+
+**Before calling any MCP tool** (`tla_parse`, etc.), run `ToolSearch` with query `+tlaplus` (max_results 10) to load them. MCP tools are deferred and unavailable until discovered via ToolSearch. Do this once at the start.
 
 You read a TLA+ specification and generate property-based tests that exercise the system's state machine. Each test runs random sequences of actions and asserts that all invariants hold after every transition.
 
