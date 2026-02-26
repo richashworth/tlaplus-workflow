@@ -18,7 +18,7 @@ Status: complete
 - [x] **9. "Walk me through" option has no follow-up in skill** — added re-offer of Step 4 choices after walkthrough.
 - [x] **10. `continue: true` can produce redundant violations** — added dedup-by-property guidance to verifier.
 - [x] **11. Animator missing `Glob` in tools** — added.
-- [x] **12. No template marker validation before injection** — added verification step to animator.
+- [x] **12. No template marker validation before injection** — resolved: template is now an inert shell loaded from the MCP server; animator only writes `playground-gen.js` and `playground-gen.css`.
 - [x] **13. Skill auto-commits without asking user** — now asks user before committing.
 - [x] **14. Test-writer can't validate TLA+ spec** — added `mcp__tlaplus__tla_parse` to its tools.
 - [x] **15. plugin.json says "five" agents, there are six** — fixed to "six".
@@ -27,5 +27,5 @@ Status: complete
 
 - **16.** Structured summary is free-text markdown — fragile. Consider JSON schema.
 - **17.** No retry/backoff for MCP server transport failures.
-- **18.** Playground template (1037 lines) maintained via marker injection — may not scale.
+- **18.** ~~Playground template maintained via marker injection~~ — resolved: template is now a static shell in the MCP server; animator generates companion JS/CSS files loaded at runtime.
 - **19.** MCP resources (`tla://specs`, etc.) declared but unused by any agent.

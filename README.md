@@ -117,9 +117,6 @@ agents/
 skills/
   tlaplus-workflow/SKILL.md  # Full pipeline: interview → specify → verify → animate → extras
 
-templates/
-  playground.html              # Playground HTML template (graph-walking engine)
-
 hooks/
   hooks.json                   # SANY syntax check on .tla writes
   check-tla-syntax.sh          # Hook implementation (uses tlaplus-mcp's jar)

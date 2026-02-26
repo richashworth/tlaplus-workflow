@@ -114,6 +114,9 @@ The template provides reusable CSS classes — prefer these over inline styles:
 | `.rs-entity`, `.rs-entity-icon`, `.rs-entity-name`, `.rs-entity-detail` | Actor/process row with icon |
 | `.rs-pipeline`, `.rs-pipeline-step`, `.rs-pipeline-dot`, `.rs-pipeline-arrow` | Step-by-step pipeline diagram |
 | `.rs-heading` | Section heading within the prototype |
+| `.rs-empty` | Centered placeholder text for empty states |
+
+The template also provides a `showToast(message)` JavaScript function. Call it from `renderState` or `renderStateVisual` to display a brief notification (e.g., `showToast("Deadlock reached")`). The toast auto-dismisses after 3 seconds.
 
 These are already themed for light/dark and use the CSS variables.
 
@@ -366,7 +369,7 @@ Unlike `renderState` (which must be a clean data dashboard), `renderStateVisual`
 - The visual tab still lives in the same narrow scrolling column, so the layout must flow normally
 - Put custom styles in `DOMAIN_STYLES`, not inline
 
-**The visual tab banner:** The template automatically shows a hint above the visual view saying "This is a first-pass visual — ask Claude to refine the layout, colors, or icons in your session." You do not need to add this yourself.
+**The visual tab hint:** The template's Visual tab button has a tooltip ("First-pass visual — ask Claude to refine layout, colors, or icons in your session"). You do not need to add any hint text yourself.
 
 **Example:** For the traffic intersection, `renderState` shows a table; `renderStateVisual` shows:
 

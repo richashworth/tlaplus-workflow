@@ -326,8 +326,9 @@ Use AskUserQuestion to let the user choose a resolution. Once they decide, updat
 
 **Step 5.4: Invoke the animator agent** when the state graph is available (`generated` or `partial`). Violations are pinned as scenarios in the playground. After the animator finishes:
 
-1. Call the `playground_init` MCP tool with `target_dir` set to `<spec_dir>/<ModuleName>/playground/`. This copies the HTML template into place deterministically.
-2. Open the playground in the browser using the `html_path` returned by `playground_init`:
+1. **Validate the generated JS.** Read `<spec_dir>/<ModuleName>/playground/playground-gen.js` and verify it contains the required globals (`GRAPH`, `ACTION_LABELS`, `INVARIANT_LABELS`, `SCENARIO_LABELS`, `HAPPY_PATHS`, `renderState`). If the file has obvious syntax issues (mismatched braces, unterminated strings) or is missing required globals, re-invoke the animator to fix it before proceeding.
+2. Call the `playground_init` MCP tool with `target_dir` set to `<spec_dir>/<ModuleName>/playground/`. This copies the HTML template into place deterministically.
+3. Open the playground in the browser using the `html_path` returned by `playground_init`:
 ```bash
 open <html_path>
 ```
