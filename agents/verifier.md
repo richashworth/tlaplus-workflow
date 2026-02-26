@@ -94,6 +94,7 @@ Call the `tlc_check` MCP tool with:
 | `continue` | `true` — explore the full state space, find all violations |
 | `generate_states` | `true` — dump state graph for the playground |
 | `dump_path` | `<spec_dir>/<ModuleName>/states` — put DOT file in artifact directory |
+| `output_file` | `<artifact_dir>/tlc-output.txt` — write raw output to file |
 
 The response is structured JSON:
 
@@ -105,13 +106,11 @@ The response is structured JSON:
   "violations": [...],
   "errors": [...],
   "dump_file": "/path/to/states.dot",
-  "raw_output": "full TLC stdout+stderr"
+  "output_file": "/path/to/tlc-output.txt"
 }
 ```
 
-### Save TLC output
-
-Save `raw_output` to `<artifact_dir>/tlc-output.txt` using the Write tool.
+The tool writes raw output directly to `output_file` — no need to save it manually.
 
 ### Handle results
 
@@ -131,11 +130,19 @@ If `dump_file` is present in the response, call the `tla_state_graph` MCP tool. 
 |---|---|
 | `dot_file` | the `dump_file` path from `tlc_check` (omit if `traces_only`) |
 | `cfg_file` | the `.cfg` file path |
-| `tlc_output` | the `raw_output` string from `tlc_check` |
+| `tlc_output_file` | the `output_file` path from `tlc_check` |
 | `format` | `"playground"` |
+| `output_file` | `<artifact_dir>/state-graph.json` |
 | `traces_only` | `true` if `distinct_states` > 100,000, omit otherwise |
 
-Save the resulting JSON to `<artifact_dir>/state-graph.json` using the Write tool.
+The tool writes the graph JSON directly to `output_file` — no need to save it manually. The response contains a compact summary:
+- `output_file` — path to `state-graph.json`
+- `state_count`, `transition_count` — for stats reporting
+- `violation_count`, `happy_path_count` — for summary
+- `partial` — whether traces-only mode was used
+- `sample_state` — vars from the initial state (shape of all variables)
+- `actions` — list of unique action names from all transitions
+- `invariants` — list of invariant/property names
 
 Determine `state_graph_status`:
 - Successful response (full graph) → `generated`
@@ -155,7 +162,7 @@ Note: in the playground state graph JSON (from `tla_state_graph`), violation tra
 
 ### Reading counterexample traces
 
-The detailed counterexample traces are in `raw_output`. Parse them to classify violations and build the return format.
+The detailed counterexample traces are in the output file at `output_file`. Read it using the Read tool, then parse them to classify violations and build the return format.
 
 Each trace follows this structure in the TLC output:
 
@@ -200,8 +207,12 @@ Your job ends at reporting what TLC found. Return a structured summary to the or
 Always return these fields:
 
 - **status**: `clean` | `violations` | `error`
-- **stats**: `states_found` and `distinct_states` from `tlc_check`; depth from `raw_output` if available
-- **state_graph**: `generated` | `partial` | `failed` | `skipped`, and include the `state-graph.json` path if generated or partial
+- **stats**: `states_found` and `distinct_states` from `tlc_check`; depth from TLC output file if available
+- **state_graph**: `generated` | `partial` | `failed` | `skipped`
+- **state_graph_file**: path to `state-graph.json` (when state_graph is `generated` or `partial`)
+- **sample_state**: the `vars` object from the initial state (passed through from `tla_state_graph`)
+- **actions**: list of unique action names (passed through from `tla_state_graph`)
+- **invariants**: list of invariant/property names (passed through from `tla_state_graph`)
 
 With `continue: true`, TLC may report multiple violations of the same property via different traces. **Deduplicate by property name** — keep only the shortest trace for each violated property. This prevents overwhelming the user with redundant scenarios.
 
@@ -252,7 +263,11 @@ When in doubt, lean toward `requirement_conflict` — it's better to ask the use
 status: violations
 violation_count: 2
 stats: 2847 states generated, 1523 distinct states, depth 14
-state_graph: generated (specs/LockManager/state-graph.json)
+state_graph: generated
+state_graph_file: specs/LockManager/state-graph.json
+sample_state: { clients: {c1: "idle", c2: "idle"}, locks: {l1: "free"} }
+actions: ["Acquire", "Release", "Timeout"]
+invariants: ["TypeOK", "MutualExclusion", "EventualRelease"]
 
 violations:
   1. category: spec_error, type: invariant, name: MutualExclusion
@@ -277,7 +292,11 @@ violations:
 ```
 status: clean
 stats: 2847 states generated, 1523 distinct states, depth 14
-state_graph: generated (specs/LockManager/state-graph.json)
+state_graph: generated
+state_graph_file: specs/LockManager/state-graph.json
+sample_state: { clients: {c1: "idle", c2: "idle"}, locks: {l1: "free"} }
+actions: ["Acquire", "Release", "Timeout"]
+invariants: ["TypeOK", "MutualExclusion", "EventualRelease"]
 ```
 
 ### Fallback narrative
