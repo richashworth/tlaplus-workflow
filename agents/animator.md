@@ -62,6 +62,8 @@ Use the `sample_state` to understand the shape of all variables. The `vars` obje
 
 6. **Render collections structurally.** Sets → badge groups. Sequences → ordered lists or pipeline diagrams. Records/functions → entity cards or table rows. Never just stringify an array.
 
+7. **Use consistent icons/emoji for identical entity types.** If the spec has multiple instances of the same entity (e.g., two users, three cars, four seats), every instance MUST use the same emoji or icon. Do not assign different emoji to distinguish instances — use text labels (names, IDs) for that. For example, all processes get `●`, all cars get `🚗`, all locks get `🔒`. This applies across both `renderState` and `renderStateVisual`.
+
 #### Layout rules (critical)
 
 - **Represent state as data, not as pictures.** You are building a dashboard, not a diagram. A traffic intersection should be a table of light states per direction and a list of waiting cars — NOT an ASCII/HTML drawing of roads with cars positioned on them. A distributed system should be entity rows with status badges — NOT boxes with arrows drawn between them. The prototype panel is a narrow scrolling column; spatial simulations don't fit and always break.
@@ -104,7 +106,7 @@ Study the `sample_state` vars. Match each variable to the most natural visual pa
 | Single enum string (e.g., `"idle"`, `"running"`) | Badge with status color | `<span class="rs-badge-ok">Running</span>` |
 | Integer representing quantity/capacity | Meter bar or large number | `.rs-meter` at N/MAX width |
 | Boolean flag | Icon toggle: `●`/`○` with color | Green circle vs grey circle |
-| Record mapping IDs → states (e.g., `{p1: "waiting", p2: "done"}`) | Entity list: one `.rs-entity` row per key | Each process as a row with icon + status |
+| Record mapping IDs → states (e.g., `{p1: "waiting", p2: "done"}`) | Entity list: one `.rs-entity` row per key | Each process as a row with icon + status. **Same icon for all instances of the same type** — differentiate by name/label, not by icon |
 | Set of items | Badge group in a flex row | One `.rs-badge-*` per set member |
 | Sequence / queue | Ordered pipeline or numbered list | `.rs-pipeline` with items as steps |
 | Nested record (e.g., `{account: {balance: 100, locked: true}}`) | Nested card | `.rs-card` inside `.rs-card` |
@@ -400,6 +402,7 @@ Before writing the files, verify:
 - [ ] Both render functions have ZERO `position: absolute`, ZERO `transform`, ZERO negative margins
 - [ ] Both render functions use utility classes and put custom CSS in DOMAIN_STYLES
 - [ ] Collections (sets, sequences, records) are rendered structurally (badge groups, tables, entity rows) — never stringified
+- [ ] All instances of the same entity type use the same emoji/icon (e.g., all users get the same icon, all cars get the same icon) — differentiate by text label, not by icon
 - [ ] The layout is all normal document flow — cards stack vertically, grids wrap, no overlapping
 - [ ] ACTION_LABELS covers all action names from the `actions` list
 - [ ] INVARIANT_LABELS has an entry for every name in the `invariants` list

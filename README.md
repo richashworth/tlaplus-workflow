@@ -7,10 +7,10 @@ Formal verification without learning TLA+. Describe your system through conversa
 Clone this repo into your Claude Code plugins directory:
 
 ```
-git clone https://github.com/richardashworth/tlaplus-workflow ~/.claude/plugins/tlaplus-workflow
+git clone https://github.com/richashworth/tlaplus-workflow ~/.claude/plugins/tlaplus-workflow
 ```
 
-Requires the [tlaplus-mcp](https://github.com/richardashworth/tlaplus-mcp) MCP server, which handles TLC/SANY toolchain management.
+The [tlaplus-mcp](https://github.com/richashworth/tlaplus-mcp) MCP server is installed automatically via npx when the plugin is used. It handles TLC/SANY toolchain management.
 
 ## Quick Start
 
@@ -101,7 +101,7 @@ Property-based tests go in your project's existing test directory, following its
 
 - **Java 11+** — runs TLC and SANY
 - **Node.js 18+** — runs the tlaplus-mcp MCP server
-- **[tlaplus-mcp](https://github.com/richardashworth/tlaplus-mcp)** — MCP server that wraps the TLA+ toolchain. Auto-downloads `tla2tools.jar` on first use
+- **[tlaplus-mcp](https://github.com/richashworth/tlaplus-mcp)** — MCP server that wraps the TLA+ toolchain. Auto-downloads `tla2tools.jar` on first use
 
 ## File Structure
 

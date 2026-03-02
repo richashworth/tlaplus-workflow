@@ -334,9 +334,10 @@ Call the `playground_init` MCP tool with `state_graph_file` set to the verifier'
 
 Then invoke the **animator** agent to replace the generic rendering with domain-specific visuals. Pass it: `sample_state` (from verifier), `actions` (from verifier), `invariants` (from verifier), `violation_summaries` (one-line summaries from verifier), the system summary (for domain language), and `playground_gen_js_path` set to `<spec_dir>/<ModuleName>/playground/playground-gen.js`.
 
-Open the playground in the browser using the `html_path` returned by `playground_init`:
+Open the playground in the browser using the `html_path` returned by `playground_init`. Use `open` on macOS or `xdg-open` on Linux:
 ```bash
-open <html_path>
+open <html_path>        # macOS
+xdg-open <html_path>    # Linux
 ```
 
 If `playground_init` fails or returns an error, tell the user: "I couldn't set up the playground — the spec and verification results are still valid. You can explore the state graph in [Spectacle](https://github.com/will62794/spectacle) instead." Do not retry more than once.
@@ -408,7 +409,7 @@ After the playground is open, what you offer depends on whether implementation c
 - **Do stop for violations.** When TLC finds bugs, present via AskUserQuestion and get user input before fixing.
 - **Do stop for extras.** Tests and code changes are opt-in.
 - **Domain knowledge lives in agents.** You handle sequencing and user interaction. The specifier knows TLA+, the verifier knows TLC, the animator knows HTML.
-- **Never use Bash for TLA+ toolchain work.** Do not run TLC, SANY, Java, or Python to parse TLC output. Do not read cached MCP tool result files. All TLA+ toolchain interaction is handled by agents calling MCP tools — the verifier returns everything you need. Your only permitted use of Bash is `open` to launch the playground in the browser.
+- **Never use Bash for TLA+ toolchain work.** Do not run TLC, SANY, Java, or Python to parse TLC output. Do not read cached MCP tool result files. All TLA+ toolchain interaction is handled by agents calling MCP tools — the verifier returns everything you need. Your only permitted use of Bash is to launch the playground in the browser (use `open` on macOS, `xdg-open` on Linux).
 
 ## Interview Principles
 

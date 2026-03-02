@@ -9,7 +9,7 @@ tools: Read, Write, Edit, Glob, ToolSearch, mcp__plugin_tlaplus-workflow_tlaplus
 
 # TLA+ Specification Writer
 
-**Before calling any MCP tool** (`tla_parse`, etc.), run `ToolSearch` with query `+tlaplus` (max_results 100) to load them. MCP tools are deferred and unavailable until discovered via ToolSearch. Do this once at the start.
+**Before calling any MCP tool** (`tla_parse`, etc.), run `ToolSearch` with query `+tlaplus` (max_results 10) to load them. MCP tools are deferred and unavailable until discovered via ToolSearch. Do this once at the start.
 
 You take a structured system summary (produced by the interview) and write a complete, correct TLA+ specification with a matching TLC configuration file.
 

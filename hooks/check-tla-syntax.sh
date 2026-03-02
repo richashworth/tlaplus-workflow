@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Post-write hook: run SANY syntax check on .tla files.
 # Uses the tla2tools.jar managed by the tlaplus-mcp server.
 
