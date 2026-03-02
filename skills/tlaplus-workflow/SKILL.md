@@ -358,8 +358,8 @@ Then use AskUserQuestion:
 > "What would you like to do?"
 
 Options:
+- "Explore in the playground" (Recommended) — re-open the playground and guide the user to the Scenarios panel (e.g., "Select a scenario from the dropdown, then use **Next Step** or **Play All** to walk through it"). Mention the **Visual** tab for a more graphical view, and that they can ask you to refine the visual layout. After the user has explored, re-ask this same question.
 - "Fix the design" — discuss which violations to fix, then update the spec to add guards or constraints that prevent them
-- "Explore in the playground" — re-open the playground and guide the user to the Scenarios panel (e.g., "Select a scenario from the dropdown, then use **Next Step** or **Play All** to walk through it"). Mention the **Visual** tab for a more graphical view, and that they can ask you to refine the visual layout. After the user has explored, re-ask this same question.
 - "Refine the visual" — the user wants to iterate on the playground's visual appearance. Discuss what they'd like changed (layout, colors, icons, grouping), then invoke the **animator** agent with: `sample_state` (from verifier), `actions` (from verifier), `invariants` (from verifier), `violation_summaries` (one-line summaries from verifier), the system summary (for domain language), and `playground_gen_js_path` set to `<spec_dir>/<ModuleName>/playground/playground-gen.js`. After the animator finishes, re-open the playground and re-present the same options. This is a cosmetic loop — no spec or verification changes needed.
 - "Continue anyway" — the user considers the violations acceptable. Note which violations are being accepted, then proceed to Step 6 normally.
 
