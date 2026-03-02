@@ -1,16 +1,34 @@
 # tlaplus-workflow
 
-Formal verification without learning TLA+. Describe your system through conversation (or point at code), and get back a verified TLA+ spec, an interactive playground, and optionally property-based tests and scaffolded implementation code.
+A [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plugin for formal verification without learning TLA+. Describe your system through conversation (or point at code), and get back a verified TLA+ spec, an interactive playground, and optionally property-based tests and scaffolded implementation code.
 
 ## Installation
 
-Clone this repo into your Claude Code plugins directory:
+Install the plugin once — it's then available in every project you open with Claude Code.
 
 ```
 git clone https://github.com/richashworth/tlaplus-workflow ~/.claude/plugins/tlaplus-workflow
 ```
 
 The [tlaplus-mcp](https://github.com/richashworth/tlaplus-mcp) MCP server is installed automatically via npx when the plugin is used. It handles TLC/SANY toolchain management.
+
+## Usage in an existing project
+
+Open Claude Code in your project directory and run the skill:
+
+```
+cd your-project/
+claude
+> /tlaplus-workflow
+```
+
+Or point it at specific code to bootstrap from:
+
+```
+> /tlaplus-workflow src/booking/
+```
+
+Specs and playgrounds are written into your project (default: `specs/`). No configuration needed.
 
 ## Quick Start
 
@@ -28,7 +46,7 @@ Walks you through describing your system — entities, states, transitions, cons
 /tlaplus-workflow src/booking/
 ```
 
-Scans your code for stateful patterns (state machines, locks, queues, shared resources), pre-fills the interview with what it finds, then asks you to confirm and fill in gaps.
+Scans your code for stateful patterns (state machines, locks, queues, shared resources), pre-fills the interview with what it finds, then asks you to confirm and fill gaps.
 
 ### With a structured summary
 
@@ -91,7 +109,8 @@ specs/                          # (or .tlaplus/, or custom path)
     state-graph.json            # Parsed state graph (drives the playground)
     playground/                 # Playground subdirectory
       playground.html           # Interactive prototype (opens in browser)
-      playground-gen.js         # Generated data + render functions
+      playground-data.js        # State graph data (deterministic, never edited)
+      playground-gen.js         # Generated labels + render functions
       playground-gen.css        # Generated domain styles
 ```
 
@@ -99,9 +118,11 @@ Property-based tests go in your project's existing test directory, following its
 
 ## Requirements
 
+- **[Claude Code](https://docs.anthropic.com/en/docs/claude-code)** — the CLI tool this plugin extends
 - **Java 11+** — runs TLC and SANY
 - **Node.js 18+** — runs the tlaplus-mcp MCP server
-- **[tlaplus-mcp](https://github.com/richashworth/tlaplus-mcp)** — MCP server that wraps the TLA+ toolchain. Auto-downloads `tla2tools.jar` on first use
+
+The [tlaplus-mcp](https://github.com/richashworth/tlaplus-mcp) MCP server is fetched from GitHub via npx on first use and auto-downloads `tla2tools.jar` — no manual setup needed.
 
 ## File Structure
 
