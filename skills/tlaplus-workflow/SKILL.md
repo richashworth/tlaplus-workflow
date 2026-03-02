@@ -1,9 +1,11 @@
 ---
 name: tlaplus-workflow
 description: >
-  Full TLA+ pipeline: interview a user (or bootstrap from code) to produce a structured summary,
-  generate a TLA+ spec, verify with TLC, build an interactive playground, and offer scaffolding
-  and property-based tests. The single entry point for formal specification.
+  The single entry point for ALL TLA+ work. Use this skill whenever the user asks anything
+  about TLA+ specs: writing, checking, verifying, model-checking, exploring state graphs,
+  or building playgrounds. Covers the full pipeline (interview → spec → TLC → playground →
+  scaffolding) and individual operations. Never run TLA+ tools (TLC, SANY, tla2tools.jar,
+  Java) directly — this skill's agents handle the toolchain via MCP.
 user-invocable: true
 ---
 
