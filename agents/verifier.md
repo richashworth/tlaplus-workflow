@@ -158,45 +158,39 @@ The `tlc_check` response lists violations with summary info:
 - `name`: the TLA+ property name (e.g., `MutualExclusion`) — may be absent for deadlocks
 - `summary`: a brief description
 
-Note: in the playground state graph JSON (from `tla_state_graph`), violation traces use `invariant` or `property` instead of `name` to identify the violated property.
-
 ### Reading counterexample traces
 
-The detailed counterexample traces are in the output file at `output_file`. Read it using the Read tool, then parse them to classify violations and build the return format.
+The state graph JSON (generated in Step 4 at `<artifact_dir>/state-graph.json`) contains complete structured violation traces. Read it using the Read tool. The `violations` array contains entries like:
 
-Each trace follows this structure in the TLC output:
-
+```json
+{
+  "id": "v1",
+  "type": "invariant",
+  "invariant": "MutualExclusion",
+  "summary": "...",
+  "trace": [
+    {"stateId": "1", "action": null, "vars": {"lock": "free", "clients": {"c1": "idle", "c2": "idle"}}},
+    {"stateId": "3", "action": "Acquire", "vars": {"lock": "c1", "clients": {"c1": "holding", "c2": "idle"}}},
+    {"stateId": "7", "action": "Acquire", "vars": {"lock": "c2", "clients": {"c1": "holding", "c2": "holding"}}}
+  ]
+}
 ```
-State 1: <Initial predicate>
-/\ var1 = value1
-/\ var2 = value2
 
-State 2: <ActionName line N, col M to line P, col Q of module Spec>
-/\ var1 = new_value1
-/\ var2 = value2
-```
-
-For each `State N:` block:
-1. Capture the state number
-2. Capture the action label (text between `<` and `>`, or `<Initial predicate>`)
-3. Capture all `/\ var = value` assignments
-4. Diff against previous state to identify which variables changed
+For each violation trace:
+1. The `type` field tells you the violation kind: `"invariant"`, `"deadlock"`, or `"temporal"`.
+2. The violated property is in the `invariant` field (for safety violations) or `property` field (for liveness violations). Deadlocks have neither.
+3. Each trace step has a `stateId`, `action` (null for the initial state), and `vars` (the complete variable assignment at that state).
+4. Diff `vars` between consecutive steps to identify which variables changed.
 
 For **invariant violations**, the trace ends at a state where the invariant is false.
 
 For **deadlocks**, the trace ends at a state where no action in `Next` is enabled.
 
-For **temporal (liveness) violations**, the trace may include a "Back to state" loop:
+For **temporal (liveness) violations**, the trace ends with a "Back to state" entry — a lasso indicating an infinite cycle. The property fails because something that should eventually happen never does within that loop.
 
-```
-State 5: <Action ...>
-/\ ...
-Back to state 3.
-```
+Use the structured trace data to classify each violation (see section 6).
 
-This is a lasso: a prefix followed by an infinite cycle (states 3→4→5→3→...). The property fails because something that should eventually happen never does within that loop.
-
-Read each violation trace step by step to classify it (see section 6).
+**Fallback:** If the state graph is unavailable (`state_graph` is `failed` or `skipped`), fall back to reading the raw TLC output file at `output_file`. Parse the `State N:` blocks manually as described in the fallback narrative protocol (section 6).
 
 ## 6. Return Format
 
@@ -256,6 +250,22 @@ These require the user to decide which requirement to relax or how to resolve th
 4. If every step faithfully follows the stated requirements but the end state still violates an invariant or property → `requirement_conflict`.
 
 When in doubt, lean toward `requirement_conflict` — it's better to ask the user than to silently "fix" a design decision.
+
+### Classification signals
+
+**Strong signals for `spec_error`:**
+- A variable changes between states that no action in the structured summary describes changing (missing UNCHANGED)
+- An action fires in a state where the summary says it shouldn't be possible (missing or wrong guard)
+- The trace's very first state already violates the invariant (Init predicate is wrong)
+- The violation disappears when you mentally add an obvious missing guard from the summary
+- An action does the opposite of what the summary describes (e.g., increments instead of decrements)
+
+**Strong signals for `requirement_conflict`:**
+- Every action in the trace does exactly what the structured summary describes — the spec faithfully encodes the requirements
+- The violated property is a liveness property and the loop contains only correctly-implemented actions blocking each other
+- Two "should never happen" constraints are individually satisfiable but jointly unsatisfiable in some reachable state
+- The only way to fix the violation would require relaxing or removing a stated requirement
+- A deadlock where every action's guard is correctly encoded but the guards collectively block all progress
 
 ### Example return (violations)
 

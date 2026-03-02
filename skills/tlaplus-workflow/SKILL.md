@@ -330,7 +330,7 @@ Use AskUserQuestion to let the user choose a resolution. Once they decide, updat
 
 **Step 5.4: Build the playground** when the state graph is available (`generated` or `partial`).
 
-Call the `playground_init` MCP tool with `state_graph_file` set to the verifier's `state_graph_file` path and `target_dir` set to `<spec_dir>/<ModuleName>/playground/`. This generates the complete playground deterministically — JS (with GRAPH data, generic labels, and render functions), CSS, and HTML.
+Call the `playground_init` MCP tool with `state_graph_file` set to the verifier's `state_graph_file` path, `target_dir` set to `<spec_dir>/<ModuleName>/playground/`, and `title` set to the system name from the structured summary `## System:` header. This generates the complete playground deterministically — JS (with GRAPH data, generic labels, and render functions), CSS, and HTML.
 
 Then invoke the **animator** agent to replace the generic rendering with domain-specific visuals. Pass it: `sample_state` (from verifier), `actions` (from verifier), `invariants` (from verifier), `violation_summaries` (one-line summaries from verifier), the system summary (for domain language), and `playground_gen_js_path` set to `<spec_dir>/<ModuleName>/playground/playground-gen.js`.
 

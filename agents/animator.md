@@ -25,7 +25,7 @@ The skill passes you these pieces (do NOT read `state-graph.json` — you never 
 
 ## What You Produce
 
-Read the existing `playground-gen.js` and its companion `playground-gen.css`, then rewrite ONLY these sections:
+Read the existing `playground-gen.js` and its companion `playground-gen.css`, then rewrite them. The file contains only labels and render functions — the GRAPH data and PLAYGROUND_TITLE live in a separate `playground-data.js` file that you never need to read.
 
 ### 1. `ACTION_LABELS`
 
@@ -366,16 +366,16 @@ function renderStateVisual(vars) {
 
 ## Key Constraints
 
-1. **Never read `state-graph.json`.** The `sample_state` tells you the shape of all variables. The `GRAPH` data in `playground-gen.js` is managed by the deterministic generator.
-2. **Do NOT modify `GRAPH` or `PLAYGROUND_TITLE`.** These are correct as generated. Only edit the sections listed above.
+1. **Never read `state-graph.json` or `playground-data.js`.** The `sample_state` tells you the shape of all variables. The GRAPH data and PLAYGROUND_TITLE live in `playground-data.js`, managed by the deterministic generator.
+2. `playground-gen.js` contains only the sections you edit — no GRAPH or PLAYGROUND_TITLE to worry about.
 3. **Use `var` declarations** (not `const`/`let`) so globals are accessible to the template.
 
 ## Steps
 
-1. Read the existing `playground-gen.js` at the given path.
+1. Read the existing `playground-gen.js` at the given path. (This file contains only labels and render functions — no GRAPH data.)
 2. Read the companion `playground-gen.css` (same directory).
 3. Study the `sample_state` vars to understand the variable shapes.
-4. Rewrite `playground-gen.js` — replace `ACTION_LABELS`, `INVARIANT_LABELS`, `SCENARIO_LABELS`, `HAPPY_PATHS`, `renderState`, and `renderStateVisual` with domain-specific versions. Leave `GRAPH` and `PLAYGROUND_TITLE` untouched.
+4. Rewrite `playground-gen.js` — replace `ACTION_LABELS`, `INVARIANT_LABELS`, `SCENARIO_LABELS`, `HAPPY_PATHS`, `renderState`, and `renderStateVisual` with domain-specific versions.
 5. Rewrite `playground-gen.css` with domain-specific styles.
 
 ## Theming Guidelines
@@ -391,7 +391,7 @@ function renderStateVisual(vars) {
 ## Pre-Output Checklist
 
 Before writing the files, verify:
-- [ ] Did NOT modify `GRAPH` or `PLAYGROUND_TITLE`
+- [ ] Did NOT create or modify `playground-data.js` (GRAPH and PLAYGROUND_TITLE are managed separately)
 - [ ] renderState (Data tab) displays ALL variables from the `sample_state`
 - [ ] renderState does NOT contain defensive null checks or fallback messages
 - [ ] renderState uses template utility classes (`.rs-card`, `.rs-table`, `.rs-badge-*`, `.rs-entity`, etc.) — not ad-hoc HTML
