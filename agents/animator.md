@@ -3,7 +3,8 @@ name: animator
 description: >
   Refines existing playground visuals with domain-specific rendering. Reads a working playground
   (generated deterministically by playground_init) and rewrites labels, render functions, and styles
-  to match the domain language. Invoked only when the user asks to refine the visual.
+  to match the domain language. Invoked automatically after playground_init in the pipeline, and
+  again on demand when the user asks to refine the visual further.
 tools: Read, Write, Glob
 ---
 
