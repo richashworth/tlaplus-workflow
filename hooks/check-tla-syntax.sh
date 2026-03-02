@@ -7,8 +7,16 @@ FILE_PATH="${CLAUDE_FILE_PATH:-}"
 
 JAR="$HOME/.tlaplus-mcp/lib/tla2tools.jar"
 if [[ ! -f "$JAR" ]]; then
-  echo "SANY syntax check skipped: tla2tools.jar not found at $JAR (run the tlaplus MCP server once to auto-download)" >&2
-  exit 0
+  JAR_URL="https://nightly.tlapl.us/dist/tla2tools.jar"
+  JAR_DIR="$(dirname "$JAR")"
+  mkdir -p "$JAR_DIR"
+  if curl -fsSL --max-time 60 -o "$JAR" "$JAR_URL" 2>/dev/null; then
+    echo "Downloaded tla2tools.jar to $JAR" >&2
+  else
+    rm -f "$JAR"
+    echo "SANY syntax check skipped: failed to download tla2tools.jar" >&2
+    exit 0
+  fi
 fi
 
 java -cp "$JAR" tla2sany.SANY "$FILE_PATH" 2>&1
