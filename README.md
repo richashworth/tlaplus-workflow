@@ -61,9 +61,10 @@ Skip the interview — go straight to: generate spec → verify → animate.
 ```
 /tlaplus-workflow
     ↓ interview (or bootstrap from code)
-    ↓ specifier agent → .tla + .cfg
-    ↓ verifier agent → TLC check + state graph dump
-    ↓ animator agent → playground/ (opens in browser)
+    ↓ specifier agent  → .tla + .cfg
+    ↓ reviewer agent   → coverage + semantic check
+    ↓ verifier agent   → TLC check + state graph dump
+    ↓ animator agent   → playground/ (opens in browser)
     ↓ violations? → explore in playground, discuss in Claude Code
 ```
 
@@ -84,8 +85,9 @@ Specialist workers invoked by the skill or used standalone. They contain all the
 |---|---|
 | **extractor** | Scans source code for stateful/concurrent patterns. Produces a draft structured summary. |
 | **specifier** | Translates a structured summary into a TLA+ module (`.tla`) and TLC config (`.cfg`). |
-| **verifier** | Runs TLC, parses output, translates counterexamples to plain-language bug reports. |
-| **animator** | Generates a self-contained interactive HTML playground from TLC's pre-computed state graph. |
+| **reviewer**  | Reviews a spec against its structured summary for coverage gaps and semantic mismatches. |
+| **verifier**  | Runs TLC, parses output, translates counterexamples to plain-language bug reports. |
+| **animator**  | Generates a self-contained interactive HTML playground from TLC's pre-computed state graph. |
 
 ## Hook
 
@@ -122,10 +124,11 @@ The [tlaplus-mcp](https://github.com/richashworth/tlaplus-mcp) MCP server is fet
 
 ```
 agents/
+  extractor.md       # Code → draft structured summary
   specifier.md       # Structured summary → TLA+ spec
+  reviewer.md        # Spec ↔ summary coverage + semantic check
   verifier.md        # TLC runner + narrative translator
   animator.md        # Spec → interactive playground
-  extractor.md       # Code → draft structured summary
 
 skills/
   tlaplus-workflow/SKILL.md  # Full pipeline: interview → specify → verify → animate

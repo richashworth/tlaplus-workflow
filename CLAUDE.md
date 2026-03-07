@@ -6,7 +6,7 @@ Claude Code plugin that hides TLA+ formal verification behind a conversational i
 
 ```
 skills/tlaplus-workflow/SKILL.md   # Orchestrator — owns all user interaction
-agents/*.md                        # Four specialist agents (extractor, specifier, verifier, animator)
+agents/*.md                        # Five specialist agents (extractor, specifier, reviewer, verifier, animator)
 hooks/check-tla-syntax.sh          # Post-write hook — runs SANY on .tla files
 hooks/hooks.json                   # Hook registration (Write/Edit on .tla)
 .mcp.json                          # MCP server config (tlaplus-mcp)
