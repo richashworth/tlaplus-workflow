@@ -305,9 +305,12 @@ Use AskUserQuestion to let the user choose a resolution. Once they decide, updat
 
 ### Step 5: Present and offer next steps
 
-Tell the user what was created (file paths) and give a one-line summary of the module scope (e.g., "3 entities, 5 actions, 2 safety invariants, 1 liveness property"). Then ask what they'd like to do next:
+Tell the user what was created (file paths) and give a one-line summary of the module scope (e.g., "3 entities, 5 actions, 2 safety invariants, 1 liveness property"). Then use AskUserQuestion:
+> "What would you like to do next?"
 
+Options:
 - **Walk me through the spec** — summarize the spec in plain language: what the entities are, what transitions exist, what properties are checked, and why. No TLA+ syntax — just the domain story. After the walkthrough, re-present this same choice so the user can proceed.
+- **Generate a PDF** — produce a polished, typeset PDF of the specification. Before typesetting, read the `.tla` file and add narrative TLA+ comments (`\* ...`) that explain each section in plain language — what each variable represents, what each action does and why, what each invariant protects against, and what each liveness property guarantees. Write these as concise, readable prose aimed at someone unfamiliar with TLA+. Then call the `tla_tex` MCP tool with `shade: true` to typeset the annotated spec. Tell the user where the PDF was written. Re-present this same choice so the user can proceed.
 - **Explore it** — run TLC model checking and build an interactive playground to explore the design (Step 6).
 
 Wait for the user's choice before proceeding.
@@ -426,6 +429,7 @@ Then use AskUserQuestion:
 Options:
 - "Refine the visual" — the user wants to iterate on the playground's visual appearance. Discuss what they'd like changed (layout, colors, icons, grouping), then invoke the **animator** agent with: `sample_state` (from verifier), `actions` (from verifier), `invariants` (from verifier), `violation_summaries` (one-line summaries from verifier), the system summary (for domain language), and `playground_gen_js_path` set to `<spec_dir>/<ModuleName>/playground/playground-gen.js`. After the animator finishes, re-open the playground and re-present Step 7 options again.
 - "Adjust the spec" — the user wants to change the system design (add entities, modify transitions, change constraints, etc.). Discuss what they want to change, update the structured summary to reflect the changes, then re-enter the pipeline at Step 3 (Specify). This runs the full specify → verify → playground cycle with the updated summary.
+- "Generate a PDF" — same as the Step 5 PDF option: add narrative comments to the `.tla` file, then call `tla_tex` with `shade: true`. Tell the user where the PDF was written. Re-present Step 7 options.
 - "Done" — wrap up. Note: "The verified spec is at `<path>`. You can reference it when building — ask me to check your code against it or write tests derived from it. You can also load the spec in [Spectacle](https://github.com/will62794/spectacle) for full interactive state-space exploration."
 
 ## Rules
