@@ -1,4 +1,5 @@
 __pycache__/
+.claude/settings.json
 .claude/settings.local.json
 .mcp.local.json
 .DS_Store
