@@ -52,12 +52,20 @@ Scan the code for these patterns, in priority order:
 - Circuit breakers, rate limiters
 - Handoff between services
 
+### 6. Test Assertions
+- Assertions about state values, counts, ordering, uniqueness, or resource bounds
+- Property-based test definitions (these directly encode invariants)
+- Setup/teardown sequences that reveal expected initial states or lifecycle constraints
+- Edge case tests that exercise concurrent or failure scenarios
+- Tests for behavior that isn't implemented yet (TDD — these express intent)
+
 ## Extraction Process
 
-1. **Glob** for source files (exclude `node_modules`, `vendor`, `.git`, build dirs).
+1. **Glob** for source files AND test files (exclude `node_modules`, `vendor`, `.git`, build dirs). Identify test files by convention (`*_test.*`, `*.test.*`, `*.spec.*`, `test_*.*`, `tests/`, `__tests__/`, `spec/`).
 2. **Grep** for state-indicating patterns: enum definitions, status fields, lock/mutex usage, queue operations, state machine keywords.
 3. **Read** the most relevant files identified by grep hits.
-4. For each file, extract:
+4. **Scan test files when they exist alongside the source code.** Look for assertion patterns (`assert`, `expect`, `should`, `require`, `check`) that reference state, counts, ordering, bounds, or concurrency. Skip tests that are purely about I/O, rendering, serialization, or mocking — focus on assertions that encode system rules. Test files are especially valuable when they test behavior the code doesn't implement yet (TDD) or when they express constraints more clearly than the implementation.
+5. For each file, extract:
    - Entity names (classes, structs, models with state)
    - State enumerations (the values a state field can take)
    - Transitions (methods/functions that change state, with any guards/preconditions visible in the code)
@@ -89,9 +97,11 @@ For each transition found:
 **Should never happen:**
 - [any mutex/lock patterns suggest mutual exclusion constraints]
 - [any validation checks suggest invariants]
+- [any test assertions that check for illegal states] (from tests)
 
 **Must always be true:**
 - [inferred from assertions, validations, type constraints]
+- [any test assertions that verify invariants after operations] (from tests)
 
 **Must eventually happen:**
 - [inferred from timeout handlers, retry logic, cleanup routines]
@@ -125,4 +135,5 @@ For each "must eventually" property, specify:
 2. **Flag gaps explicitly.** The Gaps section is critical — it tells the interviewer exactly where to focus.
 3. **Use the code's own terminology.** Entity names, state names, and action names should match what the developer sees in their codebase.
 4. **Prefer over-extraction.** Include borderline findings — the user can dismiss irrelevant ones. Missing a real pattern is worse than including a false positive.
-5. **Suggest next step.** End with: "This draft covers what I found in the code. The interview should continue from Phase 3 (Constraints) to confirm these findings and fill in the gaps."
+5. **Tests express intent.** When test files exist, scan them for assertions about state, bounds, and ordering. Tests often encode constraints more directly than the implementation — especially in TDD codebases where tests describe behavior that isn't built yet. Skip tests that are purely about I/O, rendering, or mocking. Tag test-derived findings with "(from tests)" so the user can see the source.
+6. **Suggest next step.** End with: "This draft covers what I found in the code. The interview should continue from Phase 3 (Constraints) to confirm these findings and fill in the gaps."
