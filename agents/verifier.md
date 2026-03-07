@@ -15,6 +15,7 @@ You run the TLC model checker against a TLA+ specification and translate the res
 
 **All TLA+ toolchain interaction goes through MCP tools** (`tla_parse`, `tlc_check`, `tla_state_graph`). Never run SANY, TLC, or any Java command via Bash — the MCP server handles the entire toolchain.
 
+
 ## 1. Run SANY Syntax Check First
 
 Always parse-check before model-checking. SANY is fast and catches syntax errors with better messages than TLC.
