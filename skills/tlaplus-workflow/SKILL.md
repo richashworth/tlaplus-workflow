@@ -3,8 +3,8 @@ name: tlaplus-workflow
 description: >
   The single entry point for ALL TLA+ work. Use this skill whenever the user asks anything
   about TLA+ specs: writing, checking, verifying, model-checking, exploring state graphs,
-  or building playgrounds. Covers the full pipeline (interview → spec → TLC → playground →
-  scaffolding) and individual operations. Never run TLA+ tools (TLC, SANY, tla2tools.jar,
+  or building playgrounds. Covers the full pipeline (interview → spec → TLC → playground)
+  and individual operations. Never run TLA+ tools (TLC, SANY, tla2tools.jar,
   Java) directly — this skill's agents handle the toolchain via MCP.
 user-invocable: true
 ---
@@ -324,17 +324,39 @@ Use AskUserQuestion to let the user choose a resolution. Once they decide, updat
 
 **SANY errors** (syntax/parse errors, not violations): Don't surface to the user. Route to the specifier agent to fix silently. Re-verify. Escalate after 2 failed attempts.
 
-**Step 5.3: Handle state graph availability.** The verifier always produces a state graph when TLC runs successfully — either a full graph (`generated`) or a traces-only graph (`partial`) when the full state space is too large. Both work with the animator and playground identically.
+**Step 5.3: Handle state graph availability.** The verifier always produces a state graph when TLC runs successfully — either a full graph (`generated`) or a traces-only graph (`partial`) when the full state space is too large. Both work with the animator and playground identically. Always proceed to Step 5.4 when any graph is available — the playground is worth generating even on partial data.
 
-- `generated` or `partial` → proceed to Step 5.4.
-- `partial` → additionally note to the user: "The state space is large (substitute actual values from the verifier's `stats` field: `{stats.states_found}` states found, `{stats.distinct_states}` distinct), so the playground shows violation scenarios and key paths rather than the full graph. You can explore the full state space in [Spectacle](https://github.com/will62794/spectacle)."
-- `failed` or `skipped` → no playground. Present violations as text in Step 5.5. Suggest opening the `.tla` file in [Spectacle](https://github.com/will62794/spectacle).
+- `generated` → proceed to Step 5.4. If `stats.distinct_states` exceeds 10,000, additionally note: "The state space is large ({stats.distinct_states} distinct states). The playground covers it, but for deeper exploration you can also load the spec in [Spectacle](https://github.com/will62794/spectacle)."
+- `partial` → proceed to Step 5.4. Additionally note to the user: "The state space is large ({stats.states_found} states found, {stats.distinct_states} distinct), so the playground shows violation scenarios and key paths rather than the full graph. For full state-space exploration, load the spec in [Spectacle](https://github.com/will62794/spectacle)."
+- `failed` or `skipped` → no state graph is available, so the playground cannot be built. Present violations as text in Step 5.5 and tell the user: "No state graph was produced, so I can't build a playground for this run. You can load the `.tla` file directly in [Spectacle](https://github.com/will62794/spectacle) to explore interactively."
 
 **Step 5.4: Build the playground** when the state graph is available (`generated` or `partial`).
 
 Call the `playground_init` MCP tool with `state_graph_file` set to the verifier's `state_graph_file` path, `target_dir` set to `<spec_dir>/<ModuleName>/playground/`, and `title` set to the system name from the structured summary `## System:` header. This generates the complete playground deterministically — JS (with GRAPH data, generic labels, and render functions), CSS, and HTML.
 
-Then invoke the **animator** agent to replace the generic rendering with domain-specific visuals. Pass it: `sample_state` (from verifier), `actions` (from verifier), `invariants` (from verifier), `violation_summaries` (one-line summaries from verifier), the system summary (for domain language), and `playground_gen_js_path` set to `<spec_dir>/<ModuleName>/playground/playground-gen.js`.
+**Before invoking the animator**, propose sensible visualization defaults based on the `sample_state` variable shapes and the system summary. Study each variable and pick the most natural rendering:
+
+- Records mapping IDs → states → entity rows with status badges
+- Enums/strings → colored badges
+- Integers/counters → meters or large numbers
+- Sets → badge groups
+- Sequences/queues → pipelines or ordered lists
+- Booleans → icon toggles
+
+Present a short summary of the plan. Use AskUserQuestion:
+> "Before I build the interactive playground, here's how I'll visualize the state:
+>
+> - [Entity/variable]: [proposed rendering]
+> - [Entity/variable]: [proposed rendering]
+> - ...
+>
+> Want to adjust anything?"
+
+Options:
+- "Looks good — build it" — proceed to invoke the animator with the proposed defaults
+- "Some changes" — the user describes what they want different. Ask targeted follow-up questions if needed (e.g., "Should processes be shown as cards or table rows?", "Any color preferences?"), then proceed with the adjusted plan
+
+Pass the confirmed visualization preferences to the **animator** agent along with: `sample_state` (from verifier), `actions` (from verifier), `invariants` (from verifier), `violation_summaries` (one-line summaries from verifier), the system summary (for domain language), and `playground_gen_js_path` set to `<spec_dir>/<ModuleName>/playground/playground-gen.js`.
 
 Open the playground in the browser using the `html_path` returned by `playground_init`. Use `open` on macOS or `xdg-open` on Linux:
 ```bash
@@ -364,7 +386,7 @@ Options:
 - "Explore in the playground" (Recommended) — re-open the playground and guide the user to the Scenarios panel (e.g., "Select a scenario from the dropdown, then use **Next Step** or **Play All** to walk through it"). Mention the **Visual** tab for a more graphical view, and that they can ask you to refine the visual layout. After the user has explored, re-ask this same question.
 - "Fix the design" — discuss which violations to fix, then update the spec to add guards or constraints that prevent them
 - "Refine the visual" — the user wants to iterate on the playground's visual appearance. Discuss what they'd like changed (layout, colors, icons, grouping), then invoke the **animator** agent with: `sample_state` (from verifier), `actions` (from verifier), `invariants` (from verifier), `violation_summaries` (one-line summaries from verifier), the system summary (for domain language), and `playground_gen_js_path` set to `<spec_dir>/<ModuleName>/playground/playground-gen.js`. After the animator finishes, re-open the playground and re-present the same options. This is a cosmetic loop — no spec or verification changes needed.
-- "Continue anyway" — the user considers the violations acceptable. Note which violations are being accepted, then proceed to Step 6 normally.
+- "Continue anyway" — the user considers the violations acceptable. Note which violations are being accepted, then proceed to Step 6 (wrap-up).
 
 **If the user chooses "Fix the design":** Discuss the violations conversationally. The user may want to fix some and accept others — let them explain in their own words. For each violation they want fixed, understand whether to add a guard/constraint or relax the invariant. Then use AskUserQuestion:
 > "Want me to commit the current spec before I make changes? (Makes it easy to roll back.)"
@@ -380,28 +402,15 @@ Then update the spec and re-run from Step 5.1. Repeat until the user is satisfie
 
 Options:
 - "Refine the visual" — the user wants to iterate on the playground's visual appearance. Discuss what they'd like changed (layout, colors, icons, grouping), then invoke the **animator** agent with: `sample_state` (from verifier), `actions` (from verifier), `invariants` (from verifier), `violation_summaries` (one-line summaries from verifier), the system summary (for domain language), and `playground_gen_js_path` set to `<spec_dir>/<ModuleName>/playground/playground-gen.js`. After the animator finishes, re-open the playground and re-present the same options. This is a cosmetic loop — no spec or verification changes needed.
-- "Generate code" — proceed to Step 6 for scaffolding and property-based tests.
+- "Done" — proceed to Step 6 (wrap-up).
 
-### Step 6: Offer extras
+### Step 6: Wrap up
 
-After the playground is open, what you offer depends on whether implementation code exists:
+Tell the user what's been created:
+- Spec files: `<spec_dir>/<ModuleName>.tla` and `.cfg`
+- Playground: `<spec_dir>/<ModuleName>/playground/`
 
-**If the workflow started from code** (the system summary has a source path with existing files):
-- **Code changes:** Offer to apply spec-driven changes back to the source via the **implementer** agent (refinement mode).
-- **Property-based tests:** Offer to generate tests via the **test-writer** agent.
-
-**If no implementation code exists** (spec was written from a design, not from code):
-1. Detect whether the project has a language stack (`package.json`, `Cargo.toml`, `go.mod`, `pyproject.toml`, etc.).
-2. If a language is detected, offer: "Want me to generate a state machine implementation from this spec? I'll scaffold the core logic in [detected language], generate property-based tests, and run them to confirm correctness."
-3. If no language is detected, ask the user what language to target before offering.
-4. If the user accepts, run the **scaffold → test → verify** sequence:
-
-   **Scaffold → Test → Verify sequence:**
-   1. Invoke the **implementer** agent in scaffold mode — it generates the state machine module.
-   2. Invoke the **test-writer** agent — pass it the scaffolded file path so it imports from the generated module.
-   3. Run the tests using the project's test runner.
-   4. **If all tests pass:** Report success — "The generated implementation passes all property-based tests derived from the spec."
-   5. **If tests fail:** Present failures to the user — "The generated code doesn't match the spec in these areas: [details]. Want me to fix it?" If the user accepts, fix the implementation (not the tests — the tests represent the spec) and re-run. Retry up to 2 times, then escalate: "I wasn't able to get the tests passing automatically. Here are the remaining failures — you may need to adjust the implementation manually."
+Note: "The verified spec is at `<path>`. You can reference it when building — ask me to check your code against it or write tests derived from it. You can also load the spec in [Spectacle](https://github.com/will62794/spectacle) for full interactive state-space exploration."
 
 ## Rules
 
@@ -409,7 +418,6 @@ After the playground is open, what you offer depends on whether implementation c
 - **Stop after spec creation.** Always pause at Step 4 to let the user choose their next step. Don't auto-advance.
 - **Don't stop between verify and playground.** Once verification finishes and the state graph is built, proceed directly to building the playground via `playground_init`.
 - **Do stop for violations.** When TLC finds bugs, present via AskUserQuestion and get user input before fixing.
-- **Do stop for extras.** Tests and code changes are opt-in.
 - **Domain knowledge lives in agents.** You handle sequencing and user interaction. The specifier knows TLA+, the verifier knows TLC, the animator knows HTML.
 - **Never use Bash for TLA+ toolchain work.** Do not run TLC, SANY, Java, or Python to parse TLC output. Do not read cached MCP tool result files. All TLA+ toolchain interaction is handled by agents calling MCP tools — the verifier returns everything you need. Your only permitted use of Bash is to launch the playground in the browser (use `open` on macOS, `xdg-open` on Linux).
 
