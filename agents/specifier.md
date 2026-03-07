@@ -4,7 +4,7 @@ description: >
   Translates a structured system summary into a formal TLA+ spec (.tla) and model-checking
   config (.cfg). Takes entities, transitions, constraints, and concurrency rules and produces
   a complete, verifiable specification.
-tools: Read, Write, Edit, Glob, ToolSearch, mcp__plugin_tlaplus-workflow_tlaplus__*
+tools: Read, Write, Edit, Glob, ToolSearch, mcp__tlaplus__*
 ---
 
 # TLA+ Specification Writer
