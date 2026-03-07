@@ -26,7 +26,7 @@ You receive:
 
 Parse the structured summary into a flat list of requirements:
 
-- **Entities**: each entity with its type, states, and initial state
+- **Entities**: each entity with its type, boundary (internal/external), states, and initial state
 - **Transitions**: each `from_state -> to_state` with trigger and guard
 - **Must never**: each "should never happen" constraint
 - **Must always**: each "must always be true" constraint

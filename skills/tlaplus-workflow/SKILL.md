@@ -58,8 +58,9 @@ Ask:
 - "How do they relate to each other? Does a [entity A] belong to a [entity B]?"
 - "How many of each can exist? Is there a fixed number of [resource] or can it grow?"
 - "Who or what initiates actions? (users, timers, external systems)"
+- "Which of these does your system control, and which are external? (e.g., a payment gateway you call but don't own)"
 
-Capture for each entity: name, whether it's a resource (finite, shared) or an actor (initiates actions), quantity bounds.
+Capture for each entity: name, whether it's a resource (finite, shared) or an actor (initiates actions), quantity bounds, and whether it's internal (controlled by the system) or external (an environment dependency the system cannot guarantee behaviour for).
 
 **Gate:** Present what you've captured as a table or list. Use AskUserQuestion:
 > "**Entities and Relationships** — here's what I have so far: [list]. Is this complete?"
@@ -171,7 +172,7 @@ Options:
 
 Before finishing, verify every box is checked. If any are missing, go back and ask.
 
-- [ ] All entities identified with their possible states
+- [ ] All entities identified with their possible states and boundary (internal vs external)
 - [ ] All state transitions identified with their triggers
 - [ ] All guards/preconditions on transitions are explicit
 - [ ] All "should never happen" statements captured
@@ -195,6 +196,7 @@ Once the interview is complete and the checklist passes, produce a structured su
 For each entity:
 - **[Name]**: [description]
   - Type: resource | actor | timer
+  - Boundary: internal | external
   - Count: [fixed N | unbounded | range]
   - States: [state1, state2, ...]
   - Initial state: [state]

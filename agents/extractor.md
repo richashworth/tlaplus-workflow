@@ -83,6 +83,7 @@ Produce a draft structured summary. Mark it clearly as a **draft** that needs us
 For each entity found:
 - **[Name]**: [description inferred from code]
   - Type: resource | actor | timer
+  - Boundary: [internal | external | "unknown — ask user"]
   - Count: [inferred or "unknown — ask user"]
   - States: [states found in code]
   - Initial state: [inferred from constructors/defaults]

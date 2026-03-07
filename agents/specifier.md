@@ -135,7 +135,7 @@ Rules for the config:
 ## Process
 
 1. Read the structured summary carefully.
-2. Map entities to CONSTANTS, entity states to variable domains, actions to TLA+ actions.
+2. Map entities to CONSTANTS, entity states to variable domains, actions to TLA+ actions. For **external** entities (boundary: external), model their behaviour as nondeterministic — the system cannot control what they do, only react to it.
 3. Map "must never" invariants to safety invariants (boolean predicates over state).
 4. Map "must eventually" properties to temporal formulas (typically `<>[]P` or `[]<>P` with fairness).
 5. Write the `.tla` file.
