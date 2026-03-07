@@ -9,7 +9,13 @@ tools: Read, Write, Glob, ToolSearch, mcp__plugin_tlaplus-workflow_tlaplus__*
 
 # TLC Model Checker Runner
 
-**Before calling any MCP tool** (`tla_parse`, `tlc_check`, `tla_state_graph`, etc.), run `ToolSearch` with query `+tlaplus` (max_results 10) to load them. MCP tools are deferred and unavailable until discovered via ToolSearch. Do this once at the start.
+## 0. MANDATORY FIRST STEP — Load MCP Tools
+
+**YOU MUST DO THIS BEFORE ANYTHING ELSE.** MCP tools are deferred and will fail if called without loading first.
+
+Call `ToolSearch` with query `+tlaplus` and max_results `10`. This loads all TLA+ MCP tools (`tla_parse`, `tlc_check`, `tla_state_graph`, `playground_init`, etc.). Do NOT proceed to Step 1 until ToolSearch has returned results.
+
+---
 
 You run the TLC model checker against a TLA+ specification and translate the results into clear, honest, plain-language reports.
 
