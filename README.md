@@ -103,6 +103,7 @@ specs/                          # (or .tlaplus/, or custom path)
     states.dot                  # TLC state graph dump (DOT format)
     tlc-output.txt              # Captured TLC stdout/stderr
     state-graph.json            # Parsed state graph (structured JSON)
+    traces.md                   # Mermaid sequence diagrams for violation traces
 ```
 
 For interactive state-space exploration, load the spec in [Spectacle](https://github.com/will62794/spectacle).

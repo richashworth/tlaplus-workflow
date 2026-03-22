@@ -405,14 +405,15 @@ Build this from the verifier's violation traces. Map action names to domain phra
 
 The XML trace data is kept internally so you can present it on demand when the user asks for details.
 
-After the narrative, add: *"You can ask to see the full trace or a diagram for any of these."*
+**Generate trace diagrams.** For each violation, generate a mermaid sequence diagram (for multi-actor concurrent traces) or state diagram (for single-actor traces) using domain action labels from the trace. Write `traces.md` to the artifact directory (`<spec_dir>/<ModuleName>/traces.md`) — one mermaid diagram per violation, each preceded by the violation's one-line summary.
+
+After the narrative, add: *"Trace diagrams are in `<artifact_dir>/traces.md`."*
 
 Then use AskUserQuestion:
 > "What would you like to do?"
 
 Options:
 - "Show me the full trace for [violation]" — render the `<trace>` for that violation as a numbered step list: step number, domain action label, and each `<change>` shown as `var: old → new`. After showing, re-ask this same question.
-- "Draw me a diagram of [violation]" — render the trace as an ASCII sequence diagram (for multi-actor concurrent traces) or an ASCII state diagram (for single-actor traces). Use the domain action labels from the trace. Keep it compact — the diagram should fit in a terminal without scrolling. After showing, re-ask this same question.
 - "Fix the design" — discuss which violations to fix, then update the spec to add guards or constraints that prevent them
 - "Continue anyway" — the user considers the violations acceptable. Note which violations are being accepted, then proceed to Step 8.
 
@@ -443,6 +444,7 @@ Present as a one-line summary: "{M} distinct states explored — all rules hold.
 Tell the user what's been created:
 - Spec files: `<spec_dir>/<ModuleName>.tla` and `.cfg`
 - State graph: `<spec_dir>/<ModuleName>/state-graph.json` (if generated)
+- Trace diagrams: `<spec_dir>/<ModuleName>/traces.md` (if violations were found)
 
 Then use AskUserQuestion:
 > "What would you like to do next?"
