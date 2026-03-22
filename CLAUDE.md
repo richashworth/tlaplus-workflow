@@ -1,12 +1,12 @@
 # tlaplus-workflow
 
-Claude Code plugin that hides TLA+ formal verification behind a conversational interface. Users describe systems in plain language (or point at code); the plugin produces verified TLA+ specs and interactive playgrounds.
+Claude Code plugin that hides TLA+ formal verification behind a conversational interface. Users describe systems in plain language (or point at code); the plugin produces verified TLA+ specs.
 
 ## Structure
 
 ```
 skills/tlaplus-workflow/SKILL.md   # Orchestrator — owns all user interaction
-agents/*.md                        # Five specialist agents (extractor, specifier, reviewer, verifier, animator)
+agents/*.md                        # Four specialist agents (extractor, specifier, reviewer, verifier)
 hooks/check-tla-syntax.sh          # Post-write hook — runs SANY on .tla files
 hooks/hooks.json                   # Hook registration (Write/Edit on .tla)
 .mcp.json                          # MCP server config (tlaplus-mcp)

@@ -1,6 +1,6 @@
 # tlaplus-workflow
 
-A [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plugin for formal verification without learning TLA+. Describe your system through conversation (or point at code), and get back a verified TLA+ spec and an interactive playground.
+A [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plugin for formal verification without learning TLA+. Describe your system through conversation (or point at code), and get back a verified TLA+ spec with results presented narratively.
 
 ## Installation
 
@@ -28,7 +28,7 @@ Or point it at specific code to bootstrap from:
 > /tlaplus-workflow src/booking/
 ```
 
-Specs and playgrounds are written into your project (default: `specs/`). No configuration needed.
+Specs are written into your project (default: `specs/`). No configuration needed.
 
 ## Quick Start
 
@@ -38,7 +38,7 @@ Specs and playgrounds are written into your project (default: `specs/`). No conf
 /tlaplus-workflow
 ```
 
-Walks you through describing your system — entities, states, transitions, constraints, concurrency, edge cases. Then: generate spec → verify → interactive playground.
+Walks you through describing your system — entities, states, transitions, constraints, concurrency, edge cases. Then: generate spec → verify → results.
 
 ### From code
 
@@ -46,7 +46,7 @@ Walks you through describing your system — entities, states, transitions, cons
 /tlaplus-workflow src/booking/
 ```
 
-Scans your code for stateful patterns (state machines, locks, queues, shared resources), pre-fills the interview with what it finds, then asks you to confirm and fill gaps.
+Scans your code for stateful patterns (state machines, locks, queues, shared resources), pre-fills the interview with what it finds, then asks you to confirm and fill gaps. When implementation details are found (transaction boundaries, concurrency primitives), the spec models operations at that granularity.
 
 ### With a structured summary
 
@@ -54,7 +54,7 @@ Scans your code for stateful patterns (state machines, locks, queues, shared res
 /tlaplus-workflow summary.md
 ```
 
-Skip the interview — go straight to: generate spec → verify → animate.
+Skip the interview — go straight to: generate spec → verify.
 
 ### Typical flow
 
@@ -63,9 +63,9 @@ Skip the interview — go straight to: generate spec → verify → animate.
     ↓ interview (or bootstrap from code)
     ↓ specifier agent  → .tla + .cfg
     ↓ reviewer agent   → coverage + semantic check
-    ↓ verifier agent   → TLC check + state graph dump
-    ↓ animator agent   → playground/ (opens in browser)
-    ↓ violations? → explore in playground, discuss in Claude Code
+    ↓ verifier agent   → TLC check + state graph
+    ↓ results presented narratively in conversation
+    ↓ violations? → discuss, fix, refine
 ```
 
 ### Standalone usage
@@ -74,7 +74,6 @@ Already have a spec? Just ask Claude directly — it picks the right agent:
 
 ```
 "Verify specs/LockManager.tla"         # Runs the verifier agent
-"Build a playground for LockManager"    # Runs the animator agent
 ```
 
 ## Agents
@@ -87,7 +86,6 @@ Specialist workers invoked by the skill or used standalone. They contain all the
 | **specifier** | Translates a structured summary into a TLA+ module (`.tla`) and TLC config (`.cfg`). |
 | **reviewer**  | Reviews a spec against its structured summary for coverage gaps and semantic mismatches. |
 | **verifier**  | Runs TLC, parses output, translates counterexamples to plain-language bug reports. |
-| **animator**  | Generates a self-contained interactive HTML playground from TLC's pre-computed state graph. |
 
 ## Hook
 
@@ -104,13 +102,10 @@ specs/                          # (or .tlaplus/, or custom path)
   LockManager/                  # Derived artifacts
     states.dot                  # TLC state graph dump (DOT format)
     tlc-output.txt              # Captured TLC stdout/stderr
-    state-graph.json            # Parsed state graph (drives the playground)
-    playground/                 # Playground subdirectory
-      playground.html           # Interactive prototype (opens in browser)
-      playground-data.js        # State graph data (deterministic, never edited)
-      playground-gen.js         # Generated labels + render functions
-      playground-gen.css        # Generated domain styles
+    state-graph.json            # Parsed state graph (structured JSON)
 ```
+
+For interactive state-space exploration, load the spec in [Spectacle](https://github.com/will62794/spectacle).
 
 ## Requirements
 
@@ -128,10 +123,8 @@ agents/
   specifier.md       # Structured summary → TLA+ spec
   reviewer.md        # Spec ↔ summary coverage + semantic check
   verifier.md        # TLC runner + narrative translator
-  animator.md        # Spec → interactive playground
-
 skills/
-  tlaplus-workflow/SKILL.md  # Full pipeline: interview → specify → verify → animate
+  tlaplus-workflow/SKILL.md  # Full pipeline: interview → specify → verify → results
 
 hooks/
   hooks.json                   # SANY syntax check on .tla writes

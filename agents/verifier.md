@@ -13,7 +13,7 @@ tools: Read, Write, Glob, ToolSearch, mcp__tlaplus__*
 
 **YOU MUST DO THIS BEFORE ANYTHING ELSE.** MCP tools are deferred and will fail if called without loading first.
 
-Call `ToolSearch` with query `+tlaplus` and max_results `10`. This loads all TLA+ MCP tools (`tla_parse`, `tlc_check`, `tla_state_graph`, `playground_init`, etc.). Do NOT proceed to Step 1 until ToolSearch has returned results.
+Call `ToolSearch` with query `+tlaplus` and max_results `10`. This loads all TLA+ MCP tools (`tla_parse`, `tlc_check`, `tla_state_graph`, etc.). Do NOT proceed to Step 1 until ToolSearch has returned results.
 
 ---
 
@@ -88,7 +88,7 @@ Tell the user what you changed and why:
 
 ### Create artifact directory
 
-Create `<spec_dir>/<ModuleName>/` for derived artifacts (state graph, TLC output, playground).
+Create `<spec_dir>/<ModuleName>/` for derived artifacts (state graph, TLC output).
 
 ### Invoke TLC
 
@@ -99,7 +99,7 @@ Call the `tlc_check` MCP tool with:
 | `tla_file` | path to the `.tla` file |
 | `cfg_file` | path to the `.cfg` file |
 | `continue` | `true` — explore the full state space, find all violations |
-| `generate_states` | `true` — dump state graph for the playground |
+| `generate_states` | `true` — dump state graph for analysis |
 | `dump_path` | `<spec_dir>/<ModuleName>/states` — put DOT file in artifact directory |
 | `output_file` | `<artifact_dir>/tlc-output.txt` — write raw output to file |
 
@@ -129,16 +129,16 @@ The tool writes raw output directly to `output_file` — no need to save it manu
 
 Deadlock checking is enabled by default. Pass `deadlock: false` only if the spec intentionally allows deadlock (terminating systems).
 
-### Generate playground state graph
+### Generate state graph
 
-If `dump_file` is present in the response, call the `tla_state_graph` MCP tool. If `distinct_states` exceeds 100,000, skip the full DOT parse and request traces only — the playground works identically on partial graphs.
+If `dump_file` is present in the response, call the `tla_state_graph` MCP tool. If `distinct_states` exceeds 100,000, skip the full DOT parse and request traces only — the JSON output works identically on partial graphs.
 
 | Parameter | Value |
 |---|---|
 | `dot_file` | the `dump_file` path from `tlc_check` (omit if `traces_only`) |
 | `cfg_file` | the `.cfg` file path |
 | `tlc_output_file` | the `output_file` path from `tlc_check` |
-| `format` | `"playground"` |
+| `format` | `"json"` |
 | `output_file` | `<artifact_dir>/state-graph.json` |
 | `traces_only` | `true` if `distinct_states` > 100,000, omit otherwise |
 
@@ -318,7 +318,7 @@ invariants: ["TypeOK", "MutualExclusion", "EventualRelease"]
 
 ### Fallback narrative
 
-Only produce the full narrative translation below when you report `state_graph: failed` or `state_graph: skipped`. When the state graph is available — whether `generated` or `partial` — the playground handles visualization, so return summaries only.
+Only produce the full narrative translation below when you report `state_graph: failed` or `state_graph: skipped`. When the state graph is available — whether `generated` or `partial` — the SKILL presents results narratively, so return summaries only.
 
 #### Narrative translation protocol (fallback only)
 
