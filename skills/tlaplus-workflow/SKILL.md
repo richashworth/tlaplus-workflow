@@ -405,11 +405,14 @@ Build this from the verifier's violation traces. Map action names to domain phra
 
 The XML trace data is kept internally so you can present it on demand when the user asks for details.
 
+After the narrative, add: *"You can ask to see the full trace or a diagram for any of these."*
+
 Then use AskUserQuestion:
 > "What would you like to do?"
 
 Options:
 - "Show me the full trace for [violation]" — render the `<trace>` for that violation as a numbered step list: step number, domain action label, and each `<change>` shown as `var: old → new`. After showing, re-ask this same question.
+- "Draw me a diagram of [violation]" — render the trace as an ASCII sequence diagram (for multi-actor concurrent traces) or an ASCII state diagram (for single-actor traces). Use the domain action labels from the trace. Keep it compact — the diagram should fit in a terminal without scrolling. After showing, re-ask this same question.
 - "Fix the design" — discuss which violations to fix, then update the spec to add guards or constraints that prevent them
 - "Continue anyway" — the user considers the violations acceptable. Note which violations are being accepted, then proceed to Step 8.
 
