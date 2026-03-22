@@ -396,24 +396,28 @@ By this point, all `spec_error` violations have been resolved in Step 7.2. Only 
 </verification-results>
 ```
 
-Build this from the verifier's violation traces. Map action names to domain phrases using the transition descriptions from the structured summary. Present to the user as readable text:
+Build this from the verifier's violation traces. Map action names to domain phrases using the transition descriptions from the structured summary. The XML trace data is kept internally so you can present it on demand when the user asks for details.
+
+**Generate trace diagrams.** For each violation, generate a mermaid sequence diagram (for multi-actor concurrent traces) or state diagram (for single-actor traces) using domain action labels from the trace. Write `traces.md` to the artifact directory (`<spec_dir>/<ModuleName>/traces.md`) — one mermaid diagram per violation, each preceded by the violation's one-line summary.
+
+Present to the user as readable text, with the trace diagram location included directly:
 
 > TLC found {N} scenarios where your design rules conflict:
 >
 > **1. {rule-description}**
 > {narrative text}
-
-The XML trace data is kept internally so you can present it on demand when the user asks for details.
-
-**Generate trace diagrams.** For each violation, generate a mermaid sequence diagram (for multi-actor concurrent traces) or state diagram (for single-actor traces) using domain action labels from the trace. Write `traces.md` to the artifact directory (`<spec_dir>/<ModuleName>/traces.md`) — one mermaid diagram per violation, each preceded by the violation's one-line summary.
-
-After the narrative, add: *"Trace diagrams are in `<artifact_dir>/traces.md`."*
+>
+> **2. {rule-description}**
+> {narrative text}
+>
+> Trace diagrams for each violation: `<artifact_dir>/traces.md`
 
 Then use AskUserQuestion:
 > "What would you like to do?"
 
 Options:
 - "Show me the full trace for [violation]" — render the `<trace>` for that violation as a numbered step list: step number, domain action label, and each `<change>` shown as `var: old → new`. After showing, re-ask this same question.
+- "View trace diagrams" — tell the user to open `<artifact_dir>/traces.md`, which contains one mermaid sequence diagram (for multi-actor concurrent traces) or state diagram (for single-actor traces) per violation, labeled with domain actions. After noting the path, re-ask this same question.
 - "Fix the design" — discuss which violations to fix, then update the spec to add guards or constraints that prevent them
 - "Continue anyway" — the user considers the violations acceptable. Note which violations are being accepted, then proceed to Step 8.
 

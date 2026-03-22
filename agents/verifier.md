@@ -157,6 +157,13 @@ Determine `state_graph_status`:
 - Parse error → `failed`
 - No `dump_file` in `tlc_check` response (TLC errored before dumping) → `skipped`
 
+### Context hygiene for large results
+
+MCP tool responses land in your context window even when the data is also written to disk. Protect your context from large results:
+
+- **After `tlc_check`:** Use only the structured response fields (`status`, `states_found`, `distinct_states`, `violations`, `dump_file`, `output_file`) for your logic. Do NOT re-read or quote the full raw TLC output from the tool response — if you need details later, read the written `output_file` via the Read tool with targeted line ranges.
+- **After `tla_state_graph`:** Use only the compact summary fields from the response (`state_count`, `transition_count`, `violation_count`, `sample_state`, `actions`, `invariants`). To read violation traces, use the Read tool on the written `output_file` (state-graph.json) — do NOT process the full graph structure inline from the tool response.
+
 ## 5. Interpret Violations
 
 The `tlc_check` response lists violations with summary info:
