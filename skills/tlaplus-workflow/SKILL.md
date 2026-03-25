@@ -343,7 +343,7 @@ Handle results:
 
 Automatically run TLC to catch encoding errors before presenting the spec to the user. Invoke the **verifier** agent — pass the spec files and the confirmed structured summary. This is a full verifier run (same as Step 7), but the state graph is discarded. The purpose is solely to surface and fix problems before the user sees the spec.
 
-**Spec coding errors** (`spec_error`) — route back to the specifier with the violation trace and the `fix_suggestion`. The fix suggestion tells the specifier which definition to modify, what the fix is, and provides a TLA+ snippet. Ask the specifier to apply the suggested fix. Re-verify after the fix. Do this silently — the user doesn't need to see encoding bugs. Escalate to the user only after 2 failed fix attempts.
+**Spec coding errors** (`spec_error`) — route back to the specifier with the violation trace and the `fix_suggestion`. Re-verify after the fix. Do this silently — the user doesn't need to see encoding bugs. Escalate to the user only after 2 failed fix attempts.
 
 **Requirement conflicts** (`requirement_conflict`) — these are design issues the user must resolve. Present each conflict with:
 - The rule that was broken
@@ -383,7 +383,7 @@ This step runs TLC, generates the state graph, and presents results narratively.
 
 **Step 7.2: Handle verifier results by category.** The verifier classifies each violation as either a `spec_error` or a `requirement_conflict`:
 
-**Spec coding errors** (`spec_error`) — the TLA+ code doesn't correctly encode the user's requirements. These are bugs in the spec, not in the design. Route back to the specifier agent with the violation trace and the `fix_suggestion`. The fix suggestion identifies the target definition, describes the fix in plain language, and provides a corrected TLA+ snippet. Ask the specifier to apply the suggested fix. Re-verify after the fix. Escalate to the user only after 2 failed fix attempts ("I've tried to fix this twice but the issue persists — here's what's going wrong: [details]").
+**Spec coding errors** (`spec_error`) — the TLA+ code doesn't correctly encode the user's requirements. These are bugs in the spec, not in the design. Route back to the specifier agent with the violation trace and the `fix_suggestion`. Re-verify after the fix. Escalate to the user only after 2 failed fix attempts ("I've tried to fix this twice but the issue persists — here's what's going wrong: [details]").
 
 **Requirement conflicts** (`requirement_conflict`) — two or more stated requirements are mutually unsatisfiable. These are design decisions that only the user can resolve. For each conflict, present:
 - The rule that was broken
@@ -492,9 +492,6 @@ If `actions_never_fired` is non-empty:
 
 If all actions fired:
 > **Coverage:** All {total_actions} actions were exercised during model checking.
-
-If any action fired fewer than 5 times (and did fire at least once):
-> **Low coverage:** {action_name} fired only {N} times — this behavior was rarely exercised.
 
 Proceed to Step 8.
 

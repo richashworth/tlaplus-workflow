@@ -181,14 +181,7 @@ From the coverage results, extract:
 - **total_actions**: count of all actions in `Next`
 - **coverage_ratio**: actions_fired count / total_actions
 
-An action that never fired is a warning sign — it means either:
-- The action's guard is unreachable given the model constants (potential dead code)
-- The model constants are too small to exercise that path
-- The action has a bug in its guard that makes it permanently disabled
-
-Do not diagnose the cause — report which actions never fired and let the orchestrator present this to the user.
-
-If `tlc_coverage` fails or returns an error, set `coverage` to `"unavailable"` and proceed — coverage is informational, not blocking.
+Do not diagnose why actions never fired — just report which ones. If `tlc_coverage` fails, set `coverage` to `"unavailable"` and proceed — coverage is informational, not blocking.
 
 ## 5. Interpret Violations
 
