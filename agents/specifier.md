@@ -143,6 +143,24 @@ Rules for the config:
 7. Double-check: every variable initialised? Every action guarded? Every UNCHANGED present? Every invariant listed in `.cfg`?
 8. Run SANY to validate the spec (see **Validation** below).
 
+## Applying Fix Suggestions
+
+When invoked to fix a `spec_error`, the pipeline passes a `fix_suggestion` from the verifier containing:
+
+- **target**: the action, invariant, or definition name to modify
+- **fix**: plain-language description of what to change
+- **tla_snippet**: the corrected TLA+ fragment (a single conjunct or clause, not the full definition)
+- **rationale**: one sentence connecting the trace evidence to the fix
+
+Apply the fix:
+
+1. Read the current `.tla` file and locate the `target` definition.
+2. Apply the change described in `fix` — use `tla_snippet` as the replacement fragment within the target definition. Do not rewrite the entire definition; edit only the relevant conjunct or clause.
+3. Re-run SANY (`tla_parse`) to confirm the fix doesn't introduce syntax errors.
+4. Return the updated spec files.
+
+Do not second-guess the fix_suggestion or make additional changes beyond what it describes. The verifier diagnosed the root cause from a counterexample trace — apply the fix precisely.
+
 ## Validation
 
 After writing the `.tla` and `.cfg` files, run SANY to confirm the spec is syntactically correct and well-formed. **Do not run TLC model checking** — that is the verifier's job.
