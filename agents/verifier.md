@@ -164,6 +164,25 @@ MCP tool responses land in your context window even when the data is also writte
 - **After `tlc_check`:** Use only the structured response fields (`status`, `states_found`, `distinct_states`, `violations`, `dump_file`, `output_file`) for your logic. Do NOT re-read or quote the full raw TLC output from the tool response — if you need details later, read the written `output_file` via the Read tool with targeted line ranges.
 - **After `tla_state_graph`:** Use only the compact summary fields from the response (`state_count`, `transition_count`, `violation_count`, `sample_state`, `actions`, `invariants`). To read violation traces, use the Read tool on the written `output_file` (state-graph.json) — do NOT process the full graph structure inline from the tool response.
 
+## 4.5 Coverage Analysis
+
+When TLC reports `status: "success"` (no violations), run coverage analysis to assess verification thoroughness.
+
+Call the `tlc_coverage` MCP tool with:
+
+| Parameter | Value |
+|---|---|
+| `tla_file` | path to the `.tla` file |
+| `cfg_file` | path to the `.cfg` file |
+
+From the coverage results, extract:
+- **actions_fired**: list of action names with their invocation count and distinct states produced
+- **actions_never_fired**: list of action names that appear in the spec's `Next` disjunction but had zero invocations
+- **total_actions**: count of all actions in `Next`
+- **coverage_ratio**: actions_fired count / total_actions
+
+Do not diagnose why actions never fired — just report which ones. If `tlc_coverage` fails, set `coverage` to `"unavailable"` and proceed — coverage is informational, not blocking.
+
 ## 5. Interpret Violations
 
 The `tlc_check` response lists violations with summary info:
@@ -221,6 +240,11 @@ Always return these fields:
 - **sample_state**: the `vars` object from the initial state (passed through from `tla_state_graph`)
 - **actions**: list of unique action names (passed through from `tla_state_graph`)
 - **invariants**: list of invariant/property names (passed through from `tla_state_graph`)
+- **coverage** (when status is `clean`): coverage analysis results, or `"unavailable"` if `tlc_coverage` failed
+  - **actions_fired**: list of `{name, invocations, distinct_states}` objects
+  - **actions_never_fired**: list of action names with zero invocations
+  - **total_actions**: count of all actions in Next
+  - **coverage_ratio**: actions_fired count / total_actions (0.0 to 1.0)
 
 With `continue: true`, TLC may report multiple violations of the same property via different traces. **Deduplicate by property name** — keep only the shortest trace for each violated property. This prevents overwhelming the user with redundant scenarios.
 
@@ -231,6 +255,11 @@ For each violation, include:
 - **summary**: one sentence in domain language describing the scenario
 - **trace_states**: number of states in the counterexample trace
 - **trace**: the full step-by-step trace in domain language
+- **fix_suggestion** (required for `spec_error`):
+  - **target**: the action, invariant, or definition name to modify (e.g., `Release`, `Init`, `Next`)
+  - **fix**: plain language description of what to change
+  - **tla_snippet**: the corrected TLA+ fragment (minimal — just the changed conjunct or clause, not the entire definition)
+  - **rationale**: one sentence connecting the trace evidence to the fix
 
 Additional fields for `requirement_conflict` violations:
 - **requirements_in_tension**: which user requirements are mutually unsatisfiable
@@ -281,6 +310,18 @@ When in doubt, lean toward `requirement_conflict` — it's better to ask the use
 - The only way to fix the violation would require relaxing or removing a stated requirement
 - A deadlock where every action's guard is correctly encoded but the guards collectively block all progress
 
+### Fix suggestions for spec_errors
+
+When you classify a violation as `spec_error`, also produce a `fix_suggestion`. Use the trace to diagnose the root cause:
+
+- **Missing UNCHANGED**: A variable changes between trace states that no action in the structured summary describes changing. Target: the action name from the trace step where the spurious change occurs. Fix: add the variable to that action's UNCHANGED clause.
+- **Missing or wrong guard**: An action fires in a state where the structured summary says it shouldn't be possible. Target: the action name. Fix: add or correct the guard conjunct. Show the corrected guard in `tla_snippet`.
+- **Wrong Init**: The initial state already violates an invariant. Target: `Init`. Fix: correct the initial value assignment.
+- **Missing action in Next**: A transition from the structured summary has no corresponding action in the spec. Target: `Next`. Fix: add the action definition and include it in the Next disjunction.
+- **Wrong state update**: An action sets a variable to the wrong value compared to what the summary describes. Target: the action name. Fix: correct the primed expression.
+
+The `tla_snippet` should be the minimal corrected fragment — just the changed conjunct or clause. If the fix requires a new definition, show the full new definition.
+
 ### Example return (violations)
 
 ```
@@ -298,6 +339,11 @@ violations:
      summary: Two clients hold the same lock simultaneously because Release doesn't guard against concurrent Acquire.
      trace_states: 4
      trace: [step-by-step trace]
+     fix_suggestion:
+       target: Acquire
+       fix: Add guard requiring the lock to be free before allowing acquisition.
+       tla_snippet: /\ locks[resource] = "free"
+       rationale: The trace shows Acquire firing when locks[l1] = "c1" (already held). Adding this guard prevents re-acquisition.
   2. category: requirement_conflict, type: temporal, name: EventualRelease
      summary: A client holds a lock forever because competing acquire requests keep preempting the release action.
      trace_states: 6 (loop at state 3)
@@ -321,6 +367,14 @@ state_graph_file: specs/LockManager/state-graph.json
 sample_state: { clients: {c1: "idle", c2: "idle"}, locks: {l1: "free"} }
 actions: ["Acquire", "Release", "Timeout"]
 invariants: ["TypeOK", "MutualExclusion", "EventualRelease"]
+coverage:
+  actions_fired:
+    - name: Acquire, invocations: 412, distinct_states: 89
+    - name: Release, invocations: 380, distinct_states: 76
+  actions_never_fired:
+    - Timeout
+  total_actions: 3
+  coverage_ratio: 0.67
 ```
 
 ### Fallback narrative
