@@ -92,6 +92,31 @@ Options:
 - "Need to add/change something" — the user provides additions or corrections; update and re-present
 - "Not sure yet — ask me more" — continue probing with follow-up questions, then re-present
 
+### Phase Assessment
+
+After the States and Transitions gate, evaluate signals from Phases 1–2 to determine whether later phases can be skipped or simplified.
+
+**Single actor check:** Count distinct actor types identified in Entities and Relationships. If exactly one actor type AND no entities marked as "resource" (finite, shared), then concurrency is irrelevant to this system.
+
+**No external dependencies check:** If no timers, no external systems, and no multi-step processes were identified in Phases 1–2, then edge case probing can be simplified.
+
+**Skip conditions:**
+
+- **Phase 4 (Concurrency) is skippable** when: single actor type AND no shared resources. Record defaults: `Simultaneous actors: N/A — single actor system`, `Conflict resolution: N/A`, `Atomicity: N/A`.
+- **Phase 5 (Edge Cases) can be collapsed** when: Phase 4 is skippable AND no timers AND no external systems identified. Instead of full adversarial probing, use a single lightweight prompt (see Phase 5 below).
+- **Phase 3 (Constraints) is NEVER skippable** — constraints are sacred.
+- **Phase 6 (Completeness Checklist) and Phase 7 (Summary Output) are NEVER skippable.**
+
+If any phases will be skipped, present this to the user via AskUserQuestion:
+
+> "Based on what you've described, this looks like a [single-actor system / system without concurrency]. I'm planning to skip [Phase X] because [reason]. I'll still cover Constraints, Completeness, and Summary. Sound right?"
+
+Options:
+- "Yes, skip those" — proceed with skips as determined
+- "Actually, cover everything" — un-skip all phases and proceed normally through every phase
+
+If no phases are skippable, proceed normally without any notification.
+
 ### Constraints
 
 Find what should never happen and what must always be true.
@@ -127,6 +152,10 @@ Options:
 
 ### Concurrency
 
+**If the Phase Assessment determined concurrency is relevant**, proceed with this phase as written below.
+
+**If the Phase Assessment determined concurrency is irrelevant**, skip this phase. The default values recorded during the assessment will be used in the summary.
+
 Find what can happen simultaneously and what conflicts arise.
 
 Ask:
@@ -146,6 +175,14 @@ Options:
 - "Not sure yet — ask me more" — continue probing with follow-up questions, then re-present
 
 ### Edge Cases and Failure Modes
+
+**If the Phase Assessment determined this phase can be collapsed**, replace the full adversarial probing with a single lightweight prompt:
+
+Ask: "Based on what you've described, this is a straightforward system. Is there anything that could go wrong that we haven't covered — any timeouts, retries, or unexpected failures?"
+
+If the user raises new concerns, capture them as failure modes and probe further on those specific concerns. If not, record: "No additional failure modes identified beyond those captured in Constraints."
+
+**Otherwise**, proceed with the full phase as written below.
 
 Probe for gaps. Be adversarial. This is where real bugs hide.
 
@@ -179,8 +216,8 @@ Before finishing, verify every box is checked. If any are missing, go back and a
 - [ ] All guards/preconditions on transitions are explicit
 - [ ] All "should never happen" statements captured
 - [ ] All "must eventually happen" statements captured
-- [ ] Concurrency model clear — who can act simultaneously, and what happens on conflict
-- [ ] Failure and timeout behaviour specified for every multi-step process
+- [ ] Concurrency model clear — who can act simultaneously, and what happens on conflict (auto-passes with "N/A — single actor system" when the Phase Assessment determined concurrency is irrelevant)
+- [ ] Failure and timeout behaviour specified for every multi-step process (when Phase 5 was collapsed, this passes if the user confirmed no additional failure modes exist)
 - [ ] Resource bounds defined
 - [ ] Initial state of the system defined
 - [ ] Fairness requirements captured for each "must eventually" property (weak vs strong)
@@ -263,7 +300,7 @@ Before invoking any agent, check that the structured summary contains all 9 requ
 4. **Should never happen** — at least one constraint
 5. **Must always be true** — at least one constraint
 6. **Must eventually happen** — at least one liveness property
-7. **Concurrency** — simultaneous actors, conflict resolution, and atomicity specified
+7. **Concurrency** — simultaneous actors, conflict resolution, and atomicity specified (or "N/A" entries when the Phase Assessment determined concurrency is irrelevant)
 8. **Resource Bounds** — at least one bound defined
 9. **Failure Modes** — at least one failure scenario described
 
