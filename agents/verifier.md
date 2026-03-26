@@ -175,11 +175,7 @@ Call the `tlc_coverage` MCP tool with:
 | `tla_file` | path to the `.tla` file |
 | `cfg_file` | path to the `.cfg` file |
 
-From the coverage results, extract:
-- **actions_fired**: list of action names with their invocation count and distinct states produced
-- **actions_never_fired**: list of action names that appear in the spec's `Next` disjunction but had zero invocations
-- **total_actions**: count of all actions in `Next`
-- **coverage_ratio**: actions_fired count / total_actions
+From the coverage results, build the `coverage` object for the return format (section 6): `actions_fired` as `{name, invocations, distinct_states}` objects, `actions_never_fired` as a name list, `total_actions`, and `coverage_ratio`.
 
 Do not diagnose why actions never fired — just report which ones. If `tlc_coverage` fails, set `coverage` to `"unavailable"` and proceed — coverage is informational, not blocking.
 
