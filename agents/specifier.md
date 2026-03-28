@@ -221,6 +221,12 @@ SYMMETRY Symmetry
 
 Only apply symmetry to sets whose elements are truly interchangeable — they must appear identically in Init, all actions, and all invariants. If any action treats one element specially (e.g., a "primary" node), that set cannot use symmetry.
 
+## Deadlock / Termination
+
+If the structured summary says `Terminates: yes`, add `CHECK_DEADLOCK FALSE` to the `.cfg` file. Terminating systems intentionally reach states where no action is enabled — this is correct behaviour, not a deadlock. Without this setting, TLC will report a spurious deadlock violation at every terminal state.
+
+If the summary says `Terminates: no` or does not include a Termination section, omit `CHECK_DEADLOCK FALSE` — the default deadlock checking is correct for systems that should always be able to make progress.
+
 ## Style
 
 - Use descriptive names: `workerState` not `ws`, `AcquireLock(node, resource)` not `A1(n, r)`.

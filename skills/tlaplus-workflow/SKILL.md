@@ -32,7 +32,7 @@ You drive the complete pipeline from system description to verified specificatio
    > "Does this look right?"
 
    Options:
-   - "Looks good — continue" — proceed to Phase 3
+   - "Looks good — continue" — proceed to Constraints
    - "Some corrections" — the user provides corrections in their answer; apply them and re-present
    - "Start the interview from scratch" — ignore extractor findings and begin at Entities and Relationships
 3. Skip to **Constraints** — the extractor covers Entities and Relationships and States and Transitions.
@@ -81,8 +81,9 @@ Ask:
 - "What causes it to move from [state A] to [state B]?"
 - "Can it ever go backwards? From [state B] back to [state A]?"
 - "What's the starting state for a new [entity]?"
+- "Does the system have a final/done state where everything stops, or does it run continuously?"
 
-Capture for each entity: enumerated states, initial state, every transition as (from_state, trigger, to_state).
+Capture for each entity: enumerated states, initial state, every transition as (from_state, trigger, to_state). Also capture whether the system terminates (reaches a final state where no further actions occur) or runs indefinitely.
 
 **Gate:** Present a state machine summary for each entity (states + transitions). Use AskUserQuestion:
 > "**States and Transitions** — here's the state machine for each entity: [summary]. Is this complete?"
@@ -94,22 +95,22 @@ Options:
 
 ### Phase Assessment
 
-After the States and Transitions gate, evaluate signals from Phases 1–2 to determine whether later phases can be skipped or simplified.
+After the States and Transitions gate, evaluate signals from Entities and Relationships and States and Transitions to determine whether later phases can be skipped or simplified.
 
 **Single actor check:** Count distinct actor types identified in Entities and Relationships. If exactly one actor type AND no entities marked as "resource" (finite, shared), then concurrency is irrelevant to this system.
 
-**No external dependencies check:** If no timers, no external systems, and no multi-step processes were identified in Phases 1–2, then edge case probing can be simplified.
+**No external dependencies check:** If no timers, no external systems, and no multi-step processes were identified in the first two interview sections, then edge case probing can be simplified.
 
 **Skip conditions:**
 
-- **Phase 4 (Concurrency) is skippable** when: single actor type AND no shared resources. Record defaults: `Simultaneous actors: N/A — single actor system`, `Conflict resolution: N/A`, `Atomicity: N/A`.
-- **Phase 5 (Edge Cases) can be collapsed** when: Phase 4 is skippable AND no timers AND no external systems identified. Instead of full adversarial probing, use a single lightweight prompt (see Phase 5 below).
-- **Phase 3 (Constraints) is NEVER skippable** — constraints are sacred.
-- **Phase 6 (Completeness Checklist) and Phase 7 (Summary Output) are NEVER skippable.**
+- **Concurrency is skippable** when: single actor type AND no shared resources. Record defaults: `Simultaneous actors: N/A — single actor system`, `Conflict resolution: N/A`, `Atomicity: N/A`.
+- **Edge Cases can be collapsed** when: Concurrency is skippable AND no timers AND no external systems identified. Instead of full adversarial probing, use a single lightweight prompt (see Edge Cases and Failure Modes below).
+- **Constraints is NEVER skippable** — constraints are sacred.
+- **Completeness Checklist and Summary Output are NEVER skippable.**
 
 If any phases will be skipped, present this to the user via AskUserQuestion:
 
-> "Based on what you've described, this looks like a [single-actor system / system without concurrency]. I'm planning to skip [Phase X] because [reason]. I'll still cover Constraints, Completeness, and Summary. Sound right?"
+> "Based on what you've described, this looks like a [single-actor system / system without concurrency]. I'm planning to skip [section name] because [reason]. I'll still cover Constraints, Completeness, and Summary. Sound right?"
 
 Options:
 - "Yes, skip those" — proceed with skips as determined
@@ -217,7 +218,7 @@ Before finishing, verify every box is checked. If any are missing, go back and a
 - [ ] All "should never happen" statements captured
 - [ ] All "must eventually happen" statements captured
 - [ ] Concurrency model clear — who can act simultaneously, and what happens on conflict (auto-passes with "N/A — single actor system" when the Phase Assessment determined concurrency is irrelevant)
-- [ ] Failure and timeout behaviour specified for every multi-step process (when Phase 5 was collapsed, this passes if the user confirmed no additional failure modes exist)
+- [ ] Failure and timeout behaviour specified for every multi-step process (when Edge Cases was collapsed, this passes if the user confirmed no additional failure modes exist)
 - [ ] Resource bounds defined
 - [ ] Initial state of the system defined
 - [ ] Fairness requirements captured for each "must eventually" property (weak vs strong)
@@ -272,6 +273,10 @@ For each failure scenario:
 For each "must eventually" property, specify:
 - **[property]**: weak (guaranteed if continuously possible) | strong (guaranteed if repeatedly possible)
 - Default: weak — only use strong if the user indicated the action may be interrupted/preempted but should still eventually succeed.
+
+### Termination
+- **Terminates:** yes | no
+- If yes: [describe the terminal/done state — e.g., "all orders reach shipped or cancelled"]
 ```
 
 Do not add sections. Do not omit sections. Every field must have a concrete value. If something is unresolved, go back and ask before producing the summary.
@@ -290,9 +295,11 @@ Once confirmed, proceed directly to the Pipeline — do not ask "would you like 
 
 ## Pipeline
 
+**Global loop limit:** The total number of specify → review → verify cycles (Steps 3–5 or Steps 3–7) must not exceed 5. Track each cycle. If the limit is reached without a clean result, stop and escalate: "I've run 5 specify/verify cycles without resolving all issues. Here's the current state: [list outstanding issues]. Would you like to continue troubleshooting, simplify the spec, or proceed with the current version?"
+
 ### Step 1: Validate Summary
 
-Before invoking any agent, check that the structured summary contains all 9 required sections with non-empty content:
+Before invoking any agent, check that the structured summary contains all 10 required sections with non-empty content:
 
 1. **System name** — the `## System:` header has a name
 2. **Entities** — at least one entity listed with type, count, states, and initial state
@@ -303,6 +310,7 @@ Before invoking any agent, check that the structured summary contains all 9 requ
 7. **Concurrency** — simultaneous actors, conflict resolution, and atomicity specified (or "N/A" entries when the Phase Assessment determined concurrency is irrelevant)
 8. **Resource Bounds** — at least one bound defined
 9. **Failure Modes** — at least one failure scenario described
+10. **Termination** — whether the system terminates or runs indefinitely
 
 If any section is missing or empty, stop and ask the user to fill the gap before proceeding. List exactly which sections need content.
 
@@ -516,7 +524,7 @@ Options:
 - "Update my tests" — generate or update implementation tests to reflect the verified spec. Use AskUserQuestion:
   > "Where is the implementation code I should test against?"
 
-  The user provides a file or directory path. Invoke the **test-gen** agent with: the `.tla` file path, the confirmed structured summary, the implementation path, and any counterexample traces from Step 7 (if violations were found and resolved or accepted during this session). The test-gen agent reads the spec, discovers existing tests, identifies gaps, and generates tests (property-based tests for invariants, state transition tests for action sequences, boundary tests from type constraints, and regression tests from counterexample traces).
+  The user provides a file or directory path. Invoke the **test-gen** agent with: the `.tla` file path, the confirmed structured summary, the implementation path, and the path to `<spec_dir>/<ModuleName>/state-graph.json` (if it exists — this contains violation traces from Step 7 that the test-gen agent uses to generate regression tests). The test-gen agent reads the spec, discovers existing tests, identifies gaps, and generates tests (property-based tests for invariants, state transition tests for action sequences, boundary tests from type constraints, and regression tests from counterexample traces).
 
   When the test-gen agent returns:
   - **`completed`**: Tell the user what was created — list each test file and the tests within it, grouped by type. Note any new dependencies needed (e.g., a PBT library).

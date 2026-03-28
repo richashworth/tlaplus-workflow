@@ -4,7 +4,7 @@ description: >
   Reviews a TLA+ spec against its structured summary for requirement coverage and semantic
   accuracy. Back-translates the spec into plain language and flags mismatches between what
   the spec does and what the summary requires.
-tools: Read, Glob, ToolSearch
+tools: Read, Glob
 ---
 
 # TLA+ Spec Reviewer

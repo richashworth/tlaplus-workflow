@@ -93,6 +93,12 @@ For each transition found:
   - Trigger: [method/function that causes this]
   - Guard: [precondition visible in code, or "none found — ask user"]
 
+### Implementation Detail
+- **Transaction boundaries:** [which operations are wrapped in DB transactions, or "not found in code"]
+- **Concurrency primitives:** [locks, mutexes, CAS, optimistic locking found in code, or "not found in code"]
+- **API call sequences:** [multi-step API flows, external service calls, or "not found in code"]
+- **Atomicity guarantees:** [which operations are atomic vs. multi-step, or "not found in code"]
+
 ### Constraints (inferred — needs user confirmation)
 **Should never happen:**
 - [any mutex/lock patterns suggest mutual exclusion constraints]
@@ -124,6 +130,10 @@ For each "must eventually" property, specify:
 - **[property]**: weak | strong | "unknown — ask user"
 - If no liveness properties were inferred, state: "No liveness properties identified — ask user if anything must eventually happen."
 
+### Termination
+- **Terminates:** yes | no | "unknown — ask user"
+- If yes: [describe the inferred terminal state, e.g., all entities reach a "done" or "completed" state]
+
 ### Gaps (interviewer should probe these)
 - [List anything unclear, ambiguous, or not found in code]
 - [Missing guards, unclear failure modes, unhandled edge cases]
@@ -136,4 +146,4 @@ For each "must eventually" property, specify:
 3. **Use the code's own terminology.** Entity names, state names, and action names should match what the developer sees in their codebase.
 4. **Prefer over-extraction.** Include borderline findings — the user can dismiss irrelevant ones. Missing a real pattern is worse than including a false positive.
 5. **Tests express intent.** When test files exist, scan them for assertions about state, bounds, and ordering. Tests often encode constraints more directly than the implementation — especially in TDD codebases where tests describe behavior that isn't built yet. Skip tests that are purely about I/O, rendering, or mocking. Tag test-derived findings with "(from tests)" so the user can see the source.
-6. **Suggest next step.** End with: "This draft covers what I found in the code. The interview should continue from Phase 3 (Constraints) to confirm these findings and fill in the gaps."
+6. **Suggest next step.** End with: "This draft covers what I found in the code. The interview should continue from Constraints to confirm these findings and fill in the gaps."

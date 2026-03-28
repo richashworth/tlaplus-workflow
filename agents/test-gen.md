@@ -22,7 +22,7 @@ You receive:
 - The structured summary (the `## System:` document)
 - Path to the implementation source (file or directory)
 - (Optional) Path to existing test files — if not provided, discover them
-- (Optional) Counterexample traces — concrete violation scenarios from TLC (resolved spec errors or accepted requirement conflicts). Each trace is a sequence of `{action, vars}` steps. When provided, generate regression tests from them (see step 3).
+- (Optional) Path to `state-graph.json` — the state graph file produced by the verifier at `<spec_dir>/<ModuleName>/state-graph.json`. When provided, read the `violations` array from this JSON file. Each violation contains `id`, `type`, `invariant` (or `property`), `summary`, and a `trace` array of `{stateId, action, vars}` steps. Use these as concrete counterexample scenarios for regression tests (see step 3).
 
 ## 1. Understand the Spec
 
