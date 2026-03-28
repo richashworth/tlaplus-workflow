@@ -1,7 +1,7 @@
 {
   "name": "tlaplus-workflow",
   "version": "0.1.0",
-  "description": "Hide TLA+ formal verification behind a conversational interface. Five specialist agents extract, specify, review, verify, and animate stateful system designs without exposing formal notation.",
+  "description": "Hide TLA+ formal verification behind a conversational interface. Specialist agents extract, specify, review, verify, and test stateful system designs without exposing formal notation.",
   "license": "MIT",
   "repository": "https://github.com/richashworth/tlaplus-workflow",
   "author": {

@@ -513,6 +513,17 @@ Options:
   - "Where could a failure leave things partially done?"
 
   Update the structured summary with an `### Implementation Detail` section capturing: operation granularity (which domain actions are actually multi-step), transaction boundaries, atomicity guarantees, retry/failure semantics. Then re-enter the pipeline at Step 3 (Specify). The specifier rewrites the spec at finer granularity — splitting previously-atomic domain actions into multi-step operations with intermediate states, exposing potential interleavings. Re-verify to catch concurrency bugs the abstract spec missed.
+- "Update my tests" — generate or update implementation tests to reflect the verified spec. Use AskUserQuestion:
+  > "Where is the implementation code I should test against?"
+
+  The user provides a file or directory path. Invoke the **test-gen** agent with: the `.tla` file path, the confirmed structured summary, the implementation path, and any counterexample traces from Step 7 (if violations were found and resolved or accepted during this session). The test-gen agent reads the spec, discovers existing tests, identifies gaps, and generates tests (property-based tests for invariants, state transition tests for action sequences, boundary tests from type constraints, and regression tests from counterexample traces).
+
+  When the test-gen agent returns:
+  - **`completed`**: Tell the user what was created — list each test file and the tests within it, grouped by type. Note any new dependencies needed (e.g., a PBT library).
+  - **`partial`**: Show what was created, then list the gaps that couldn't be covered and why (usually because the mapping between spec concepts and implementation code was unclear). Use AskUserQuestion to let the user clarify the mapping, then re-invoke the test-gen agent with the clarifications.
+  - **`no_implementation_found`**: Tell the user the agent couldn't find implementation code at the path provided. Ask them to point at the right location.
+
+  After presenting results, re-present Step 8 options.
 - "Generate a PDF" — same as the Step 6 PDF option: invoke the **specifier** agent to add a top-of-module summary and selective inline comments (only where the logic is non-obvious), then typeset via `tla_tex` with `shade: true`. Tell the user where the PDF was written. Re-present Step 8 options.
 - "Done" — wrap up. Note: "The verified spec is at `<path>`. For interactive state-space exploration, load the spec in [Spectacle](https://github.com/will62794/spectacle)."
 

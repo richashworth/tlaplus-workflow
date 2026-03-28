@@ -66,6 +66,7 @@ Skip the interview — go straight to: generate spec → verify.
     ↓ verifier agent   → TLC check + state graph
     ↓ results presented narratively in conversation
     ↓ violations? → discuss, fix, refine
+    ↓ optionally: generate implementation tests from spec
 ```
 
 ### Standalone usage
@@ -86,6 +87,7 @@ Specialist workers invoked by the skill or used standalone. They contain all the
 | **specifier** | Translates a structured summary into a TLA+ module (`.tla`) and TLC config (`.cfg`). |
 | **reviewer**  | Reviews a spec against its structured summary for coverage gaps and semantic mismatches. |
 | **verifier**  | Runs TLC, parses output, translates counterexamples to plain-language bug reports. |
+| **test-gen**  | Generates or updates implementation tests from a verified spec — PBTs, state transition tests, boundary tests. |
 
 ## Hook
 
@@ -124,6 +126,7 @@ agents/
   specifier.md       # Structured summary → TLA+ spec
   reviewer.md        # Spec ↔ summary coverage + semantic check
   verifier.md        # TLC runner + narrative translator
+  test-gen.md        # Verified spec → implementation tests
 skills/
   tlaplus-workflow/SKILL.md  # Full pipeline: interview → specify → verify → results
 
