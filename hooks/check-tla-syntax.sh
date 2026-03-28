@@ -5,9 +5,9 @@
 FILE_PATH="${CLAUDE_FILE_PATH:-}"
 [[ "$FILE_PATH" == *.tla ]] || exit 0
 
-JAR="$HOME/.tlaplus-mcp/lib/tla2tools.jar"
+JAR="$HOME/.tlaplus-mcp/lib/tla2tools-1.8.0.jar"
 if [[ ! -f "$JAR" ]]; then
-  JAR_URL="https://nightly.tlapl.us/dist/tla2tools.jar"
+  JAR_URL="https://github.com/tlaplus/tlaplus/releases/download/v1.8.0/tla2tools.jar"
   JAR_DIR="$(dirname "$JAR")"
   mkdir -p "$JAR_DIR"
   if curl -fsSL --max-time 60 -o "$JAR" "$JAR_URL" 2>/dev/null; then
