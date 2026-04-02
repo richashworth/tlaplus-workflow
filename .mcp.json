@@ -2,7 +2,7 @@
   "mcpServers": {
     "tlaplus": {
       "command": "npx",
-      "args": ["-y", "github:richashworth/tlaplus-mcp"]
+      "args": ["-y", "tlaplus-mcp@0.1.0"]
     }
   }
 }

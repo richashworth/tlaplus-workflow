@@ -75,6 +75,29 @@ Focus on:
 - **Invariants**: What states does this rule out? Under what conditions would it be violated?
 - **Liveness properties**: What does this guarantee will eventually happen? What fairness assumptions does it depend on?
 
+#### Worked Examples: TLA+ Formulas to Plain Language
+
+Use these as reference when back-translating. Get the operator meaning exactly right before composing your plain-language description.
+
+| TLA+ Formula | Plain Language | Category |
+|---|---|---|
+| `\A x \in S : P(x)` | "For every x in S, P holds" | Universal quantifier |
+| `\E x \in S : P(x)` | "There exists some x in S where P holds" | Existential quantifier |
+| `[]P` | "P is always true (in every reachable state)" | Invariant / always |
+| `<>P` | "P eventually becomes true (in some future state)" | Eventually |
+| `[]<>P` | "P is true infinitely often (keeps being reached)" | Repeated reachability |
+| `<>[]P` | "P eventually becomes true and stays true forever after" | Stability |
+| `P ~> Q` | "Whenever P becomes true, Q eventually follows" | Leads-to |
+| `[][P]_vars` | "Every step either satisfies P or is a stuttering step (leaves vars unchanged)" | Stuttering-tolerant action |
+
+Nested quantifiers compose naturally: `\A x \in S : \E y \in T : P(x,y)` means "For every x in S, there exists some y in T such that P(x,y) holds." Read from the outside in.
+
+#### Common Misreads (watch for these)
+
+- **`[]<>` vs `<>[]`**: These are NOT equivalent. `[]<>P` means P recurs forever (infinitely often). `<>[]P` means P stabilises (eventually permanent). Confusing them inverts the meaning of a liveness property.
+- **`\A` vs `\E`**: "All must satisfy" vs "at least one can satisfy." Swapping these is the difference between a universal constraint and a mere existence claim. When you see a quantifier, pause and confirm which one it is.
+- **Nested quantifiers**: `\A x \in S : \E y \in T : P(x,y)` (for each x, some y exists) is much weaker than `\E y \in T : \A x \in S : P(x,y)` (one y works for all x). Check the nesting order carefully.
+
 ### 5. Comparison
 
 For each back-translated definition, compare the "actual behaviour" against the summary requirement it encodes. Flag a mismatch when:

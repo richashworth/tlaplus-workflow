@@ -35,6 +35,7 @@ You drive the complete pipeline from system description to verified specificatio
    - "Looks good — continue" — proceed to Constraints
    - "Some corrections" — the user provides corrections in their answer; apply them and re-present
    - "Start the interview from scratch" — ignore extractor findings and begin at Entities and Relationships
+   - "Stop here" — save progress and exit
 3. Skip to **Constraints** — the extractor covers Entities and Relationships and States and Transitions.
 
    If the extractor found implementation details (transaction boundaries, lock usage, API boundaries), include them in the structured summary under `### Implementation Detail`. When implementation detail is present, the specifier can write the spec at operation granularity from the start — modeling actual API calls and transaction boundaries rather than abstract domain actions. This catches concurrency and atomicity bugs without needing a separate refinement pass.
@@ -51,6 +52,8 @@ Start from scratch at Entities and Relationships.
 ## Interview Phases
 
 Work through these phases in order. Don't rush — each phase should feel complete before moving on. Revisit earlier phases when later questions reveal gaps.
+
+**Standing exit option:** Every AskUserQuestion in this skill — interview gates and pipeline steps alike — must include a "stop" option: `"Stop here" — save progress and exit`. When the user picks it: write the structured summary (if one has been assembled) to `<spec_dir>/summary.md` (or prompt for a directory if none has been chosen yet), copy any spec files produced so far, then exit with a brief message listing what was saved and where. If no structured summary exists yet, write a partial summary capturing whatever has been captured so far, clearly marked `## Status: incomplete`.
 
 ### Entities and Relationships
 
@@ -71,6 +74,7 @@ Options:
 - "Looks complete — next phase" — proceed to States and Transitions
 - "Need to add/change something" — the user provides additions or corrections; update and re-present
 - "Not sure yet — ask me more" — continue probing with follow-up questions, then re-present
+- "Stop here" — save progress and exit
 
 ### States and Transitions
 
@@ -92,6 +96,7 @@ Options:
 - "Looks complete — next phase" — proceed to Constraints
 - "Need to add/change something" — the user provides additions or corrections; update and re-present
 - "Not sure yet — ask me more" — continue probing with follow-up questions, then re-present
+- "Stop here" — save progress and exit
 
 ### Phase Assessment
 
@@ -115,6 +120,7 @@ If any phases will be skipped, present this to the user via AskUserQuestion:
 Options:
 - "Yes, skip those" — proceed with skips as determined
 - "Actually, cover everything" — un-skip all phases and proceed normally through every phase
+- "Stop here" — save progress and exit
 
 If no phases are skippable, proceed normally without any notification.
 
@@ -150,6 +156,7 @@ Options:
 - "Looks complete — next phase" — proceed to Concurrency
 - "Need to add/change something" — the user provides additions or corrections; update and re-present
 - "Not sure yet — ask me more" — continue probing with follow-up questions, then re-present
+- "Stop here" — save progress and exit
 
 ### Concurrency
 
@@ -174,6 +181,7 @@ Options:
 - "Looks right — next phase" — proceed to Edge Cases and Failure Modes
 - "Need to add/change something" — the user provides additions or corrections; update and re-present
 - "Not sure yet — ask me more" — continue probing with follow-up questions, then re-present
+- "Stop here" — save progress and exit
 
 ### Edge Cases and Failure Modes
 
@@ -207,6 +215,7 @@ Options:
 - "That covers it — move to summary" — proceed to Completeness Checklist
 - "Need to add/change something" — the user provides additions or corrections; update and re-present
 - "Not sure yet — ask me more" — continue probing with follow-up questions, then re-present
+- "Stop here" — save progress and exit
 
 ### Completeness Checklist
 
@@ -288,8 +297,11 @@ Options:
 - "Looks good — generate the spec" — proceed to the Pipeline
 - "Some corrections" — the user provides corrections; update the summary and re-present
 - "Go back to [phase]" — reopen the specified interview phase
+- "Stop here" — save progress and exit
 
-Once confirmed, proceed directly to the Pipeline — do not ask "would you like me to continue?".
+Once confirmed, write the structured summary to `<spec_dir>/summary.md` (prompt for spec directory first if not yet chosen — see Step 2). This persisted file enables session resumption: if the conversation is interrupted, the user can restart the skill with the `summary.md` path as `$ARGUMENTS` and resume from the Pipeline. Keep `summary.md` updated whenever the summary changes (e.g., after requirement conflict resolution in Steps 5 or 7).
+
+Then proceed directly to the Pipeline — do not ask "would you like me to continue?".
 
 ---
 
@@ -328,8 +340,22 @@ Options:
 1. **`specs/`** — visible project directory (Recommended)
 2. **`.tlaplus/`** — hidden directory
 3. Other — custom path
+4. "Stop here" — save progress and exit
 
 Store the chosen path as the **spec directory**. Pass it to all agents so they write files there.
+
+### Context management
+
+Agent calls produce large raw outputs (full TLA+ specs, TLC traces, state graphs). To prevent context blowup across the pipeline, follow this rule after every agent returns:
+
+1. Extract only the structured data you need (status, file paths, violation summaries, fix suggestions, coverage stats).
+2. Discard the raw agent output — do not carry full spec text, raw TLC output, or verbose trace dumps forward in conversation context.
+3. If the user later asks for details (e.g., "show me the full trace"), re-read the relevant file from disk rather than keeping it in context.
+
+Specifically:
+- **After specifier returns:** keep only file paths and a one-line summary of what was generated. The spec lives on disk.
+- **After reviewer returns:** keep only the pass/issues status and the list of issues (if any). Discard the reviewer's full analysis text.
+- **After verifier returns:** keep only: status, violation count, one-line violation summaries with categories, fix suggestions, state graph path, and stats. Discard raw TLC output and full trace dumps. If the user asks to see a trace, read it from the state graph file.
 
 ### Step 3: Specify
 
@@ -344,7 +370,9 @@ Handle results:
 - **`pass`** — proceed to Step 5.
 - **`issues`** — route fixes back to the specifier silently:
   - **Coverage gaps** (uncovered requirements or orphaned definitions): pass the gap list to the specifier and ask it to add missing definitions or remove orphaned ones. Re-review after the fix.
-  - **Mismatches** (spec behaviour diverges from stated requirement): pass each mismatch (definition, matched requirement, actual behaviour, discrepancy) to the specifier and ask it to fix the TLA+ logic to match the requirement. Re-review after the fix.
+  - **Mismatches** (spec behaviour diverges from stated requirement): for each mismatch, determine the root cause:
+    - **Spec encoding error** — the summary is clear but the TLA+ got it wrong. Pass the mismatch (definition, matched requirement, actual behaviour, discrepancy) to the specifier and ask it to fix the TLA+ logic. Re-review after the fix.
+    - **Summary ambiguity** — the mismatch reveals that the structured summary itself is ambiguous or incomplete, and the specifier made a reasonable but wrong interpretation. In this case, first update the structured summary (`summary.md`) to resolve the ambiguity, then pass the updated summary and the mismatch to the specifier so it can fix the spec against the corrected source of truth. Re-review after the fix.
   - Escalate to the user after 2 failed review attempts: "I've tried to align the spec with the requirements twice but some issues persist — here's what's still off: [details]."
 
 ### Step 5: Verify Spec
@@ -369,6 +397,7 @@ Tell the user what was created (file paths) and give a one-line summary of the m
 > "What would you like to do next?"
 
 Options:
+- **Stop here** — save progress and exit
 - **Walk me through the spec** — summarize the spec in plain language: what the entities are, what transitions exist, what properties are checked, and why. No TLA+ syntax — just the domain story. After the walkthrough, re-present this same choice so the user can proceed.
 - **Generate a PDF** — invoke the **specifier** agent to produce a typeset PDF. Pass it the `.tla` file path, the structured summary, and these instructions: read the spec and add a plain-language summary at the top of the module (as a block of TLA+ comments) that describes what the spec models, the key entities, and what properties it checks. Beyond the summary, only add inline comments where the TLA+ logic is genuinely non-obvious — e.g., a subtle guard condition, a fairness choice, or an encoding trick that wouldn't be clear from reading the code. Do NOT annotate every variable, action, or invariant — well-named definitions speak for themselves. Comments should be concise, readable prose aimed at someone unfamiliar with TLA+. After annotating, call the `tla_tex` MCP tool with `shade: true` to typeset the spec into a PDF. Return the PDF path. Tell the user where the PDF was written. Re-present this same choice so the user can proceed.
 - **Explore it** — run TLC model checking to explore the design (Step 7).
@@ -461,6 +490,7 @@ Then use AskUserQuestion:
 > "What would you like to do?"
 
 Options:
+- "Stop here" — save progress and exit
 - "Show me the full trace for [violation]" — render the `<trace>` for that violation as a numbered step list: step number, domain action label, and each `<change>` shown as `var: old → new`. After showing, re-ask this same question.
 - "View trace diagrams" — tell the user to open `<artifact_dir>/traces.md`, which contains one mermaid sequence diagram (for multi-actor concurrent traces) or state diagram (for single-actor traces) per violation, labeled with domain actions. After noting the path, re-ask this same question.
 - "Fix the design" — discuss which violations to fix, then update the spec to add guards or constraints that prevent them
@@ -514,6 +544,7 @@ Then use AskUserQuestion:
 > "What would you like to do next?"
 
 Options:
+- "Stop here" — save progress and exit
 - "Adjust the spec" — the user wants to change the system design (add entities, modify transitions, change constraints, etc.). Discuss what they want to change, update the structured summary to reflect the changes, then re-enter the pipeline at Step 3 (Specify). This runs the full specify → verify cycle with the updated summary.
 - "Refine the design" — drill into implementation-level detail to catch concurrency and atomicity bugs. Ask the user about their implementation:
   - "How are these operations actually implemented? Single database transactions? Multiple API calls? Message queues?"

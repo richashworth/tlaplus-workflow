@@ -5,10 +5,24 @@
 FILE_PATH="${CLAUDE_FILE_PATH:-}"
 [[ "$FILE_PATH" == *.tla ]] || exit 0
 
-JAR="$HOME/.tlaplus-mcp/lib/tla2tools-1.8.0.jar"
-if [[ ! -f "$JAR" ]]; then
+# Check Java is available
+if ! command -v java &>/dev/null; then
+  echo "SANY syntax check skipped: Java not found on PATH (JDK 11+ required)" >&2
+  exit 0
+fi
+
+# Find the tla2tools jar — pick the newest version available rather than
+# hardcoding a specific version, so the hook stays in sync with tlaplus-mcp.
+JAR_DIR="$HOME/.tlaplus-mcp/lib"
+JAR=""
+if [[ -d "$JAR_DIR" ]]; then
+  JAR="$(ls -t "$JAR_DIR"/tla2tools-*.jar 2>/dev/null | head -1)"
+fi
+
+if [[ -z "$JAR" || ! -f "$JAR" ]]; then
+  # Fallback: download the latest known version
+  JAR="$JAR_DIR/tla2tools-1.8.0.jar"
   JAR_URL="https://github.com/tlaplus/tlaplus/releases/download/v1.8.0/tla2tools.jar"
-  JAR_DIR="$(dirname "$JAR")"
   mkdir -p "$JAR_DIR"
   if curl -fsSL --max-time 60 -o "$JAR" "$JAR_URL" 2>/dev/null; then
     echo "Downloaded tla2tools.jar to $JAR" >&2

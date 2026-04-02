@@ -72,6 +72,12 @@ Scan the code for these patterns, in priority order:
    - Shared resources (anything accessed by multiple actors)
    - Concurrency primitives in use
 
+### When No Results Are Found
+
+- **No source files found:** If Glob returns zero files for the target path (after excluding `node_modules`, `vendor`, `.git`, build dirs), report this clearly: state the path that was searched and that no source files were found. Do not invent findings or fabricate a summary.
+- **Source files found but no patterns detected:** If source files exist but Grep finds no stateful or concurrent patterns, produce a structured summary with all sections marked "no patterns found." Include an explanation of what file types were scanned, what patterns were searched for (state enums, lock/mutex usage, queue operations, etc.), and that none were detected. Do not fabricate entities, transitions, or constraints to fill the template.
+- In both cases, suggest that the user verify the target path or provide additional context about where the stateful/concurrent logic lives.
+
 ## Output Format
 
 Produce a draft structured summary. Mark it clearly as a **draft** that needs user confirmation:

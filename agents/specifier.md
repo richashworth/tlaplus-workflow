@@ -34,7 +34,8 @@ Follow this exact structure:
 
 ```tla
 ---- MODULE ModuleName ----
-EXTENDS Integers, Sequences, FiniteSets, TLC
+EXTENDS Integers, Sequences, FiniteSets
+\* Note: Add TLC to EXTENDS only when debugging operators (Print, PrintT, Assert) are explicitly needed.
 
 CONSTANTS
     \* Declare all constants (entity sets, bounds)
@@ -69,7 +70,9 @@ Next ==
     \/ \E p \in Set : OtherAction(p)
 
 \* --- Specification ---
-Spec == Init /\ [][Next]_vars /\ WF_vars(Next)
+\* Use per-action fairness when liveness properties exist (see Fairness section).
+\* Safety-only specs can use the simpler WF_vars(Next).
+Spec == Init /\ [][Next]_vars /\ WF_vars(ActionName) /\ WF_vars(OtherAction)
 
 \* --- Safety Invariants ---
 InvariantName ==
@@ -179,7 +182,28 @@ After writing the `.tla` and `.cfg` files, run SANY to confirm the spec is synta
 
 ## Fairness
 
-The default `Spec` includes `WF_vars(Next)` (weak fairness over the full next-state relation). This is correct for most systems — it says "if the system can always make progress, it eventually will."
+Fairness requirements depend on whether the spec has liveness properties (PROPERTY lines in the .cfg).
+
+### Safety-only specs (no PROPERTY lines)
+
+If the .cfg contains only INVARIANT lines and no PROPERTY lines, `WF_vars(Next)` is sufficient. It says "if the system can always take some step, it eventually will." This is acceptable because safety checking does not depend on which action fires.
+
+### Specs with liveness properties (PROPERTY lines exist)
+
+**Always use per-action weak fairness** — one `WF_vars(ActionName)` conjunct for each action in `Next`. Do NOT use `WF_vars(Next)` when liveness properties exist.
+
+Why: `WF_vars(Next)` only guarantees that *some* action eventually fires if *some* action is continuously enabled. It does NOT guarantee that each individual action fires. TLC can satisfy `WF_vars(Next)` by firing one action forever and starving the rest. This causes TLC to silently pass liveness checks that should fail — a false-positive result.
+
+```tla
+\* CORRECT for specs with liveness properties — per-action fairness:
+Spec == Init /\ [][Next]_vars
+         /\ WF_vars(Action1)
+         /\ WF_vars(Action2)
+         /\ WF_vars(Action3)
+
+\* WRONG for specs with liveness properties — blanket fairness:
+\* Spec == Init /\ [][Next]_vars /\ WF_vars(Next)
+```
 
 ### When to use strong fairness (SF)
 
@@ -187,7 +211,6 @@ Use `SF_vars(ActionName)` for a **specific action** when the action may be repea
 
 **Example:** A worker repeatedly tries to acquire a lock, but other workers keep grabbing it first. With weak fairness, the worker might starve forever. Strong fairness guarantees it eventually succeeds.
 
-To use per-action fairness instead of the blanket `WF_vars(Next)`:
 ```tla
 Spec == Init /\ [][Next]_vars
          /\ WF_vars(NormalAction)
@@ -196,12 +219,12 @@ Spec == Init /\ [][Next]_vars
 
 ### When to adjust fairness
 
-Check the interview summary's "Fairness" subsection (if present). If a liveness property assumes an action succeeds despite repeated contention, use SF for that action. If the summary doesn't mention fairness or contention, the default WF is fine.
+Check the interview summary's "Fairness" subsection (if present). If a liveness property assumes an action succeeds despite repeated contention, use SF for that action. If the summary doesn't mention fairness or contention, per-action WF is the correct default for liveness specs.
 
 ### Process checklist update
 
 When writing a spec with liveness properties:
-- [ ] `Spec` includes appropriate fairness (WF at minimum)
+- [ ] `Spec` uses per-action `WF_vars(ActionName)` for every action in `Next` (not `WF_vars(Next)`)
 - [ ] Actions under contention use SF if the liveness property requires it
 - [ ] `.cfg` uses `PROPERTY` (not `INVARIANT`) for liveness
 
@@ -209,13 +232,22 @@ When writing a spec with liveness properties:
 
 When entities in a CONSTANT set are interchangeable (e.g., all workers are identical, all resources are fungible), use symmetry reduction to shrink the state space.
 
+**WARNING: Symmetry reduction is unsound with liveness/temporal properties.** TLC's symmetry reduction can produce false positives when combined with PROPERTY lines in the .cfg — TLC may report "no violation" when a liveness violation actually exists. This is a known limitation documented by TLC.
+
+- If the .cfg has PROPERTY lines, do **NOT** add SYMMETRY to that .cfg.
+- If you need both symmetry (for performance) and liveness checking, generate **two separate .cfg files**: one safety-only .cfg with SYMMETRY enabled, and one liveness .cfg without SYMMETRY.
+- When symmetry is used, always add a comment in the .cfg noting this limitation.
+
 **In the `.tla` file — define the symmetry set:**
 ```tla
 Symmetry == Permutations(Workers) \union Permutations(Resources)
 ```
 
-**In the `.cfg` file — declare it:**
+**In the `.cfg` file — declare it (safety-only configs only):**
 ```
+\* NOTE: SYMMETRY is only sound for safety checking (INVARIANT lines).
+\* Do NOT use SYMMETRY in a .cfg that contains PROPERTY lines —
+\* symmetry reduction is unsound with liveness/temporal properties.
 SYMMETRY Symmetry
 ```
 
