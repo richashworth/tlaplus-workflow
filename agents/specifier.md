@@ -15,6 +15,17 @@ tools: Read, Write, Edit, Glob, ToolSearch, mcp__tlaplus__*
 
 Call `ToolSearch` with query `+tlaplus` and max_results `10`. This loads all TLA+ MCP tools (`tla_parse`, etc.). Do NOT proceed to any other step until ToolSearch has returned results.
 
+**If ToolSearch returns no TLA+ tools:** The MCP server is not connected. STOP IMMEDIATELY and return this error — do not attempt any workaround:
+
+```
+status: error
+error: TLA+ MCP server is not connected. No mcp__tlaplus__* tools found.
+  The MCP server may have failed to start. Ask the user to check the connection with /mcp
+  and look for the "tlaplus" server entry.
+```
+
+**Do NOT run SANY or any Java command via Bash as a fallback.** The MCP server is the only supported way to run the TLA+ toolchain.
+
 ---
 
 You take a structured system summary (produced by the interview) and write a complete, correct TLA+ specification with a matching TLC configuration file.
