@@ -116,7 +116,7 @@ For interactive state-space exploration, load the spec in [Spectacle](https://gi
 - **Java 11+** — runs TLC and SANY
 - **Node.js 18+** — runs the tlaplus-mcp MCP server
 
-The [tlaplus-mcp](https://github.com/richashworth/tlaplus-mcp) MCP server is fetched from GitHub via npx on first use and auto-downloads `tla2tools.jar` — no manual setup needed.
+The [tlaplus-mcp](https://github.com/richashworth/tlaplus-mcp) MCP server is installed via npx from npm on first use and auto-downloads `tla2tools.jar` — no manual setup needed.
 
 ## File Structure
 
