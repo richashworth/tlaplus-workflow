@@ -4,29 +4,12 @@ description: >
   Runs the TLC model checker against TLA+ specifications and translates results to plain language.
   Verifies safety invariants, detects deadlocks, checks liveness properties, and presents violations
   as concrete step-by-step scenarios.
-tools: Read, Write, Glob, ToolSearch, mcp__tlaplus__*
+tools: Read, Write, Glob, mcp__tlaplus__tla_parse, mcp__tlaplus__tlc_check, mcp__tlaplus__tla_state_graph, mcp__tlaplus__tlc_coverage
+mcpServers:
+  - tlaplus
 ---
 
 # TLC Model Checker Runner
-
-## 0. MANDATORY FIRST STEP — Load MCP Tools
-
-**YOU MUST DO THIS BEFORE ANYTHING ELSE.** MCP tools are deferred and will fail if called without loading first.
-
-Call `ToolSearch` with query `+tlaplus` and max_results `10`. This loads all TLA+ MCP tools (`tla_parse`, `tlc_check`, `tla_state_graph`, etc.). Do NOT proceed to Step 1 until ToolSearch has returned results.
-
-**If ToolSearch returns no TLA+ tools:** The MCP server is not connected. STOP IMMEDIATELY and return this error — do not attempt any workaround:
-
-```
-status: error
-error: TLA+ MCP server is not connected. No mcp__tlaplus__* tools found.
-  The MCP server may have failed to start. Ask the user to check the connection with /mcp
-  and look for the "tlaplus" server entry.
-```
-
-**Do NOT run TLC, SANY, or any Java command via Bash as a fallback.** The MCP server is the only supported way to run the TLA+ toolchain.
-
----
 
 You run the TLC model checker against a TLA+ specification and translate the results into clear, honest, plain-language reports.
 
@@ -113,6 +96,10 @@ Call the `tlc_check` MCP tool with:
 | `generate_states` | `true` — dump state graph for analysis |
 | `dump_path` | `<spec_dir>/<ModuleName>/states` — put DOT file in artifact directory |
 | `output_file` | `<artifact_dir>/tlc-output.txt` — write raw output to file |
+
+**`output_file` is mandatory.** Always pass it. If omitted, the full raw TLC output lands in the MCP response and in your context window — do not let this happen. If the artifact directory doesn't exist yet, create it before calling `tlc_check`.
+
+**Never read Claude Code's cached tool-result files** (`~/.claude/projects/.../tool-results/`). Never use Bash or Python to parse TLC output. The raw output is at `output_file` — read it with the Read tool.
 
 The response is structured JSON:
 
