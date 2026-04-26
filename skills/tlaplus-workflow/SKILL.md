@@ -19,16 +19,11 @@ You drive the complete pipeline from system description to verified specificatio
 
 **If `$ARGUMENTS` is a code path** (file or directory):
 1. Invoke the **extractor** agent with that path. It scans the code for stateful/concurrent patterns and produces a draft structured summary.
-2. Present the extractor's findings as a structured checklist for the user to confirm:
+2. Present the extractor's findings for the user to confirm. Choose the format by size:
+   - **Small** (≤ 2 entities, ≤ 5 transitions): inline bullet checklist with the four sections — **Entities** (each with type and states), **State transitions** (each transition), **Implementation details** (transaction boundaries, concurrency primitives, API call sequences if found), **Gaps I noticed** (anything missing or ambiguous).
+   - **Multi-entity or multiple non-atomic composite operations**: write to `<spec_dir>/draft-summary.md` with mermaid diagrams — `classDiagram` for entity relationships, `stateDiagram-v2` per entity lifecycle, `sequenceDiagram` for non-atomic operations. Keep gaps as a checklist at the bottom. (Create `<spec_dir>` per Pipeline Step 2 if not yet chosen.) Tell the user the file path and offer to open it.
 
-   > **Here's what I found in your code:**
-   >
-   > **Entities:** [list each entity with type and states]
-   > **State transitions:** [list each transition]
-   > **Implementation details:** [transaction boundaries, concurrency primitives, API call sequences — if found]
-   > **Gaps I noticed:** [list anything missing or ambiguous]
-
-   Use AskUserQuestion:
+   Then use AskUserQuestion:
    > "Does this look right?"
 
    Options:
@@ -47,7 +42,7 @@ Validate it (see Pipeline Step 0) and skip directly to the **Pipeline**.
 Use it as initial context and start from Entities and Relationships.
 
 **If no arguments:**
-Start from scratch at Entities and Relationships.
+Before starting the interview, check whether the user has already decided TLA+ is the right tool for their problem. If they're exploring fit (e.g., asking what TLA+ is good for, or pointing at a project without a specific subsystem in mind), offer to assess fit first: identify candidate subsystems, rank them by TLA+ suitability (concurrent/stateful/non-trivial-invariants vs. pure data transformation), and recommend. Once the user picks a target, then start at Entities and Relationships.
 
 ## Interview Phases
 
