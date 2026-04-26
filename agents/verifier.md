@@ -4,10 +4,24 @@ description: >
   Runs the TLC model checker against TLA+ specifications and translates results to plain language.
   Verifies safety invariants, detects deadlocks, checks liveness properties, and presents violations
   as concrete step-by-step scenarios.
-tools: Read, Write, Glob, mcp__tlaplus__tla_parse, mcp__tlaplus__tlc_check, mcp__tlaplus__tla_state_graph, mcp__tlaplus__tlc_coverage
-mcpServers:
-  - tlaplus
 ---
+
+<!--
+  No `tools:` or `mcpServers:` fields by design.
+
+  For plugin-defined subagents (this file ships in a plugin), the docs state:
+  "plugin subagents do not support the `hooks`, `mcpServers`, or
+  `permissionMode` frontmatter fields. These fields are ignored when loading
+  agents from a plugin." See https://code.claude.com/docs/en/subagents.
+
+  Separately, plugin-defined subagents cannot access MCP tools via an explicit
+  `tools:` allowlist (anthropics/claude-code#13605). The working convention is
+  to omit `tools:` so the subagent inherits all tools from the main thread,
+  MCP tools included.
+
+  Do not re-add either field here unless the upstream bug/restriction changes.
+-->
+
 
 # TLC Model Checker Runner
 
@@ -126,6 +140,8 @@ The tool writes raw output directly to `output_file` — no need to save it manu
   - Other → report the error messages.
 
 Deadlock checking is enabled by default. Pass `deadlock: false` only if the spec intentionally allows deadlock (terminating systems).
+
+If TLC reports a deadlock and the trace shows the "deadlocked" state is a legitimate terminal of the bounded model — e.g. all actors withdrawn, all queues drained, or the bounded counter at its cap — this is a model-bound artefact, not a real deadlock. Recommend the user add `CHECK_DEADLOCK FALSE` to the `.cfg` (with a comment noting why), then re-verify. Distinguish this from a real deadlock (where the *unbounded* spec could also wedge), which is a genuine `requirement_conflict`.
 
 ### Generate state graph
 

@@ -569,6 +569,7 @@ Options:
 ## Rules
 
 - **Use AskUserQuestion for all decision points.** Never present choices as plain text. Every point where the user must choose between options uses AskUserQuestion.
+- **Prefer single-question AskUserQuestion.** Only bundle when the questions are genuinely independent — i.e. the user can answer one without nuance bleeding into the others. Tightly coupled bundles invite the "what would you like to clarify?" redirect, where the user has context to share that doesn't fit the multiple-choice frame.
 - **Stop after spec creation.** Always pause at Step 6 to let the user choose their next step. Don't auto-advance.
 - **Do stop for violations.** When TLC finds bugs, present via AskUserQuestion and get user input before fixing.
 - **Domain knowledge lives in agents.** You handle sequencing and user interaction. The specifier knows TLA+, the verifier knows TLC.

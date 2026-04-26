@@ -4,10 +4,24 @@ description: >
   Translates a structured system summary into a formal TLA+ spec (.tla) and model-checking
   config (.cfg). Takes entities, transitions, constraints, and concurrency rules and produces
   a complete, verifiable specification.
-tools: Read, Write, Edit, Glob, mcp__tlaplus__tla_parse, mcp__tlaplus__tla_tex
-mcpServers:
-  - tlaplus
 ---
+
+<!--
+  No `tools:` or `mcpServers:` fields by design.
+
+  For plugin-defined subagents (this file ships in a plugin), the docs state:
+  "plugin subagents do not support the `hooks`, `mcpServers`, or
+  `permissionMode` frontmatter fields. These fields are ignored when loading
+  agents from a plugin." See https://code.claude.com/docs/en/subagents.
+
+  Separately, plugin-defined subagents cannot access MCP tools via an explicit
+  `tools:` allowlist (anthropics/claude-code#13605). The working convention is
+  to omit `tools:` so the subagent inherits all tools from the main thread,
+  MCP tools included.
+
+  Do not re-add either field here unless the upstream bug/restriction changes.
+-->
+
 
 # TLA+ Specification Writer
 
@@ -102,6 +116,7 @@ LivenessProperty ==
 ### Constants and Finite Model
 - Use `CONSTANTS` for entity sets and bounds.
 - Keep domains small for model checking: 2-3 entities of each type is typical.
+- **Sentinels for "absent" or "none" values must be CONSTANTs declared as TLC model values in the `.cfg`** (e.g. `NoVote = NoVote`), not strings (`NoVote == "NoVote"`). String sentinels unioned with integer domains (`LegalValues \cup {NoVote}`) trigger TLC's type-strictness on the very first state evaluation.
 
 ## TLC Configuration File
 
